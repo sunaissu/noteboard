@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@sunaissu/noteboard': path.resolve(__dirname, '../src/index.tsx'),
+      react: path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
   },
 })

@@ -25,6 +25,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "react-icons": "^5.5.0"
+    "@phosphor-icons/react": "^2.1.10"
   }
 }
