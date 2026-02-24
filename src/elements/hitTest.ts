@@ -1,0 +1,173 @@
+import type { Point, ExcalidrawElement } from './types';
+import { isLinearElement } from './types';
+import { rotatePoint, getElementBounds, pointInBounds } from './bounds';
+
+// ─── Geometry Helpers ────────────────────────────────────────
+
+/** Shortest distance from point P to the line segment AB. */
+export function distanceToLineSegment(
+    p: Point,
+    a: Point,
+    b: Point,
+): number {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+
+    if (lenSq === 0) {
+        // Segment is a point
+        return Math.hypot(p.x - a.x, p.y - a.y);
+    }
+
+    // Parameter t clamped to [0,1]
+    let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = a.x + t * dx;
+    const projY = a.y + t * dy;
+    return Math.hypot(p.x - projX, p.y - projY);
+}
+
+// ─── Per-type Hit Tests ──────────────────────────────────────
+
+function hitTestRectangle(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number,
+): boolean {
+    const { x, y, width, height, angle } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+
+    // Un-rotate the test point so we can do axis-aligned checks
+    const rp = angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -angle)
+        : point;
+
+    const x1 = Math.min(x, x + width);
+    const y1 = Math.min(y, y + height);
+    const x2 = Math.max(x, x + width);
+    const y2 = Math.max(y, y + height);
+
+    // Check if point is inside (filled) or near edge (stroke)
+    const inside =
+        rp.x >= x1 - threshold &&
+        rp.x <= x2 + threshold &&
+        rp.y >= y1 - threshold &&
+        rp.y <= y2 + threshold;
+
+    return inside;
+}
+
+function hitTestLinear(
+    point: Point,
+    element: ExcalidrawElement & { points: Point[] },
+    threshold: number,
+): boolean {
+    const { x, y, angle } = element;
+    const cx = x + element.width / 2;
+    const cy = y + element.height / 2;
+
+    // Un-rotate the test point
+    const rp = angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -angle)
+        : point;
+
+    const pts = element.points;
+    if (pts.length < 2) {
+        // Single point — check distance to that point
+        if (pts.length === 1) {
+            return Math.hypot(rp.x - (x + pts[0].x), rp.y - (y + pts[0].y)) <= threshold;
+        }
+        return false;
+    }
+
+    for (let i = 0; i < pts.length - 1; i++) {
+        const a: Point = { x: x + pts[i].x, y: y + pts[i].y };
+        const b: Point = { x: x + pts[i + 1].x, y: y + pts[i + 1].y };
+        if (distanceToLineSegment(rp, a, b) <= threshold) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function hitTestText(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number,
+): boolean {
+    // For text we use the bounding box expanded by threshold
+    const bounds = getElementBounds(element);
+    return (
+        point.x >= bounds[0] - threshold &&
+        point.x <= bounds[2] + threshold &&
+        point.y >= bounds[1] - threshold &&
+        point.y <= bounds[3] + threshold
+    );
+}
+
+// ─── Main Dispatcher ─────────────────────────────────────────
+
+/**
+ * Test whether a screen-space `point` hits `element`.
+ * `threshold` is the pixel tolerance (typically half of strokeWidth + 4–10px).
+ */
+export function hitTestElement(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number = 10,
+): boolean {
+    if (element.isDeleted) return false;
+
+    switch (element.type) {
+        case 'rectangle':
+            return hitTestRectangle(point, element, threshold);
+        case 'line':
+        case 'arrow':
+        case 'draw':
+        case 'pen':
+            return hitTestLinear(
+                point,
+                element as ExcalidrawElement & { points: Point[] },
+                threshold,
+            );
+        case 'text':
+            return hitTestText(point, element, threshold);
+        default:
+            return false;
+    }
+}
+
+// ─── Multi-element Selection ─────────────────────────────────
+
+/**
+ * Return all elements whose bounding boxes overlap the given
+ * selection rectangle (marquee selection).
+ */
+export function getElementsInBounds(
+    elements: readonly ExcalidrawElement[],
+    selectionBounds: [number, number, number, number],
+    threshold: number = 0,
+): ExcalidrawElement[] {
+    const [sx1, sy1, sx2, sy2] = selectionBounds;
+    const normalized: [number, number, number, number] = [
+        Math.min(sx1, sx2) - threshold,
+        Math.min(sy1, sy2) - threshold,
+        Math.max(sx1, sx2) + threshold,
+        Math.max(sy1, sy2) + threshold,
+    ];
+
+    return elements.filter((el) => {
+        if (el.isDeleted) return false;
+        const bounds = getElementBounds(el);
+        // Check overlap
+        return (
+            bounds[0] <= normalized[2] &&
+            bounds[2] >= normalized[0] &&
+            bounds[1] <= normalized[3] &&
+            bounds[3] >= normalized[1]
+        );
+    });
+}

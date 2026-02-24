@@ -5,11 +5,12 @@ import { useState } from 'react'
 const customSlots: ToolSlot[] = [
     { position: 1, toolId: 'select' },
     { position: 2, toolId: 'pan' },
-    { position: 3, toolId: 'line' },
-    { position: 4, toolId: 'rectangle' },
-    { position: 5, toolId: 'text' },
-    { position: 6, toolId: 'arrow' },
-    { position: 7, toolId: 'eraser' },
+    { position: 3, toolId: 'rectangle' },
+    { position: 4, toolId: 'line' },
+    { position: 5, toolId: 'arrow' },
+    { position: 6, toolId: 'pen' },
+    { position: 7, toolId: 'text' },
+    { position: 8, toolId: 'eraser' },
 ]
 
 function App() {
@@ -61,7 +62,7 @@ function App() {
             </div>
 
             <p style={{ marginTop: 12, color: '#888', fontSize: 14 }}>
-                Press keys <kbd>1</kbd>–<kbd>7</kbd> to switch tools via keyboard shortcuts.
+                Press keys <kbd>1</kbd>–<kbd>{customSlots.length}</kbd> to switch tools via keyboard shortcuts.
             </p>
         </div>
     )

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'text' | 'arrow' | 'eraser';
+export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'text' | 'arrow' | 'eraser' | 'pen';
 
 export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
 
