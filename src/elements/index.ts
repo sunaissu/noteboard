@@ -7,6 +7,9 @@ export type {
     Arrowhead,
     NoteboardElementBase,
     RectangleElement,
+    EllipseElement,
+    DiamondElement,
+    TriangleElement,
     LineElement,
     ArrowElement,
     TextElement,
@@ -14,13 +17,16 @@ export type {
     PenElement,
     ExcalidrawElement,
 } from './types';
-export { isLinearElement } from './types';
+export { isLinearElement, isShapeElement } from './types';
 
 // Element creation
 export {
     generateId,
     createElement,
     createRectangleElement,
+    createEllipseElement,
+    createDiamondElement,
+    createTriangleElement,
     createLineElement,
     createArrowElement,
     createTextElement,

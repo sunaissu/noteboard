@@ -1,55 +1,107 @@
 import React from 'react';
-import type { Tool, ToolSlot, ToolbarPosition } from '../types';
-import { TOOL_REGISTRY } from '../toolRegistry';
+import type { Tool, ToolSlot, ToolbarPosition, PropertiesPosition, ShapeVariant } from '../types';
+import { TOOL_REGISTRY, SHAPE_VARIANTS } from '../toolRegistry';
+import { useNoteboardTheme } from '../ThemeContext';
 
 export interface ToolbarProps {
     slots: ToolSlot[];
     position?: ToolbarPosition;
+    propertiesPosition?: PropertiesPosition;
     activeTool?: Tool;
     onToolSelect?: (tool: Tool) => void;
+    activeShape?: ShapeVariant;
 }
+
+const SHAPE_TOOL_IDS = new Set<string>(SHAPE_VARIANTS);
 
 const positionToKey = (pos: number): string => (pos === 10 ? '0' : String(pos));
 
 export const Toolbar: React.FC<ToolbarProps> = ({
     slots,
     position = 'bottom',
+    propertiesPosition,
     activeTool,
     onToolSelect,
+    activeShape = 'rectangle',
 }) => {
+    const theme = useNoteboardTheme();
     const isVertical = position === 'left' || position === 'right';
 
     const sortedSlots = [...slots].sort((a, b) => a.position - b.position);
 
     return (
-        <div style={wrapperStyle(position)}>
-            <div style={toolbarContainerStyle(isVertical)}>
+        <div style={wrapperStyle(position, propertiesPosition)}>
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: isVertical ? 'column' : 'row',
+                    gap: 2,
+                    padding: 4,
+                    borderRadius: 10,
+                    background: theme.toolbarBg,
+                    boxShadow: theme.toolbarShadow,
+                    pointerEvents: 'auto',
+                    transition: 'background 0.3s ease, box-shadow 0.3s ease',
+                }}
+            >
                 {sortedSlots.map((slot) => {
-                    const def = TOOL_REGISTRY[slot.toolId];
+                    // For the rectangle slot, show active shape's icon
+                    const isShapeSlot = SHAPE_TOOL_IDS.has(slot.toolId);
+                    const displayToolId = isShapeSlot ? activeShape : slot.toolId;
+                    const def = TOOL_REGISTRY[displayToolId];
                     if (!def) return null;
 
-                    const isActive = activeTool === slot.toolId;
+                    const isActive = isShapeSlot
+                        ? SHAPE_TOOL_IDS.has(activeTool ?? '')
+                        : activeTool === slot.toolId;
                     const Icon = def.icon;
+                    const clickTool = isShapeSlot ? activeShape : slot.toolId;
 
                     return (
                         <button
                             key={slot.position}
-                            onClick={() => onToolSelect?.(slot.toolId)}
+                            onClick={() => onToolSelect?.(clickTool)}
                             title={`${def.label} (${positionToKey(slot.position)})`}
-                            style={buttonStyle(isActive)}
+                            style={{
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 36,
+                                height: 36,
+                                border: 'none',
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                transition: 'background 0.15s, color 0.15s',
+                                background: isActive ? theme.buttonActiveBg : 'transparent',
+                                color: isActive ? theme.buttonActiveColor : theme.buttonDefaultColor,
+                            }}
                             onMouseEnter={(e) => {
                                 if (!isActive) {
-                                    Object.assign(e.currentTarget.style, hoverBg);
+                                    e.currentTarget.style.background = theme.buttonHoverBg;
                                 }
                             }}
                             onMouseLeave={(e) => {
                                 if (!isActive) {
-                                    Object.assign(e.currentTarget.style, defaultBg);
+                                    e.currentTarget.style.background = 'transparent';
                                 }
                             }}
                         >
                             <Icon size={20} weight={isActive ? 'fill' : 'regular'} />
-                            <span style={badgeStyle}>{positionToKey(slot.position)}</span>
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 2,
+                                    right: 2,
+                                    fontSize: 9,
+                                    lineHeight: 1,
+                                    color: theme.badgeColor,
+                                    fontFamily: 'system-ui, sans-serif',
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                {positionToKey(slot.position)}
+                            </span>
                         </button>
                     );
                 })}
@@ -58,62 +110,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     );
 };
 
-const wrapperStyle = (position: ToolbarPosition): React.CSSProperties => {
+const wrapperStyle = (position: ToolbarPosition, propsPos?: PropertiesPosition): React.CSSProperties => {
     const base: React.CSSProperties = {
         position: 'absolute',
         display: 'flex',
         zIndex: 1000,
         pointerEvents: 'none',
     };
+    // When sharing the same edge with the properties panel, push toolbar
+    // inward so the properties panel can sit on the outer edge.
+    const sameEdge = propsPos === position;
+    const offset = sameEdge ? 60 : 12;
 
     switch (position) {
         case 'top':
-            return { ...base, top: 12, left: 0, right: 0, justifyContent: 'center' };
+            return { ...base, top: offset, left: 0, right: 0, justifyContent: 'center' };
         case 'bottom':
-            return { ...base, bottom: 12, left: 0, right: 0, justifyContent: 'center' };
+            return { ...base, bottom: offset, left: 0, right: 0, justifyContent: 'center' };
         case 'left':
-            return { ...base, left: 12, top: 0, bottom: 0, alignItems: 'center' };
+            return { ...base, left: offset, top: 0, bottom: 0, alignItems: 'center' };
         case 'right':
-            return { ...base, right: 12, top: 0, bottom: 0, alignItems: 'center' };
+            return { ...base, right: offset, top: 0, bottom: 0, alignItems: 'center' };
     }
-};
-
-const toolbarContainerStyle = (vertical: boolean): React.CSSProperties => ({
-    display: 'flex',
-    flexDirection: vertical ? 'column' : 'row',
-    gap: 2,
-    padding: 4,
-    borderRadius: 10,
-    background: '#ffffff',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
-    pointerEvents: 'auto',
-});
-
-const buttonStyle = (isActive: boolean): React.CSSProperties => ({
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 36,
-    height: 36,
-    border: 'none',
-    borderRadius: 8,
-    cursor: 'pointer',
-    transition: 'background 0.15s, color 0.15s',
-    background: isActive ? '#e8e0ff' : 'transparent',
-    color: isActive ? '#6c47ff' : '#444',
-});
-
-const hoverBg = { background: '#f2f2f2' };
-const defaultBg = { background: 'transparent' };
-
-const badgeStyle: React.CSSProperties = {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    fontSize: 9,
-    lineHeight: 1,
-    color: '#999',
-    fontFamily: 'system-ui, sans-serif',
-    pointerEvents: 'none',
 };

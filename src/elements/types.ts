@@ -49,6 +49,18 @@ export interface RectangleElement extends NoteboardElementBase {
     type: 'rectangle';
 }
 
+export interface EllipseElement extends NoteboardElementBase {
+    type: 'ellipse';
+}
+
+export interface DiamondElement extends NoteboardElementBase {
+    type: 'diamond';
+}
+
+export interface TriangleElement extends NoteboardElementBase {
+    type: 'triangle';
+}
+
 export interface LineElement extends NoteboardElementBase {
     type: 'line';
     /** Points are RELATIVE to (x, y) */
@@ -87,6 +99,9 @@ export interface PenElement extends NoteboardElementBase {
 
 export type ExcalidrawElement =
     | RectangleElement
+    | EllipseElement
+    | DiamondElement
+    | TriangleElement
     | LineElement
     | ArrowElement
     | TextElement
@@ -99,4 +114,10 @@ export function isLinearElement(
     el: ExcalidrawElement,
 ): el is LineElement | ArrowElement | DrawElement | PenElement {
     return el.type === 'line' || el.type === 'arrow' || el.type === 'draw' || el.type === 'pen';
+}
+
+export function isShapeElement(
+    el: ExcalidrawElement,
+): el is RectangleElement | EllipseElement | DiamondElement | TriangleElement {
+    return el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'diamond' || el.type === 'triangle';
 }

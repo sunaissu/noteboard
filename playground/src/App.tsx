@@ -16,6 +16,7 @@ const customSlots: ToolSlot[] = [
 function App() {
     const [activeTool, setActiveTool] = useState<Tool>('select')
     const [position, setPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom')
+    const [propertiesPosition, setPropertiesPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom')
 
     return (
         <div style={{ fontFamily: 'system-ui, sans-serif', padding: 20 }}>
@@ -43,13 +44,33 @@ function App() {
                 </span>
             </div>
 
+            <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label>Properties position:</label>
+                {(['top', 'bottom', 'left', 'right'] as const).map((pos) => (
+                    <button
+                        key={pos}
+                        onClick={() => setPropertiesPosition(pos)}
+                        style={{
+                            padding: '4px 12px',
+                            borderRadius: 6,
+                            border: '1px solid #ccc',
+                            background: propertiesPosition === pos ? '#e8590c' : '#fff',
+                            color: propertiesPosition === pos ? '#fff' : '#333',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        {pos}
+                    </button>
+                ))}
+            </div>
+
             <div
                 style={{
                     width: '100%',
                     height: 500,
                     border: '1px solid #ddd',
                     borderRadius: 12,
-                    background: '#fafafa',
+                    overflow: 'hidden',
                     position: 'relative',
                 }}
             >
@@ -58,11 +79,13 @@ function App() {
                     toolbarPosition={position}
                     activeTool={activeTool}
                     onToolSelect={setActiveTool}
+                    propertiesPosition={propertiesPosition}
                 />
             </div>
 
             <p style={{ marginTop: 12, color: '#888', fontSize: 14 }}>
-                Press keys <kbd>1</kbd>–<kbd>{customSlots.length}</kbd> to switch tools via keyboard shortcuts.
+                Press keys <kbd>1</kbd>–<kbd>{customSlots.length}</kbd> to switch tools.
+                Use the <strong>☰ menu</strong> in the top-right to toggle dark mode.
             </p>
         </div>
     )

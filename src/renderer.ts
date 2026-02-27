@@ -54,6 +54,15 @@ export function renderElement(
         case 'rectangle':
             renderRectangle(ctx, element);
             break;
+        case 'ellipse':
+            renderEllipse(ctx, element);
+            break;
+        case 'diamond':
+            renderDiamond(ctx, element);
+            break;
+        case 'triangle':
+            renderTriangle(ctx, element);
+            break;
         case 'line':
         case 'draw':
         case 'pen':
@@ -84,6 +93,80 @@ function renderRectangle(
     }
 
     ctx.strokeRect(x, y, width, height);
+}
+
+// ─── Ellipse ─────────────────────────────────────────────────
+
+function renderEllipse(
+    ctx: CanvasRenderingContext2D,
+    element: ExcalidrawElement,
+) {
+    const { x, y, width, height, backgroundColor } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const rx = Math.abs(width / 2);
+    const ry = Math.abs(height / 2);
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+
+    if (backgroundColor && backgroundColor !== 'transparent') {
+        ctx.fillStyle = backgroundColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+// ─── Diamond ─────────────────────────────────────────────────
+
+function renderDiamond(
+    ctx: CanvasRenderingContext2D,
+    element: ExcalidrawElement,
+) {
+    const { x, y, width, height, backgroundColor } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const hw = Math.abs(width / 2);
+    const hh = Math.abs(height / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - hh);       // top
+    ctx.lineTo(cx + hw, cy);       // right
+    ctx.lineTo(cx, cy + hh);       // bottom
+    ctx.lineTo(cx - hw, cy);       // left
+    ctx.closePath();
+
+    if (backgroundColor && backgroundColor !== 'transparent') {
+        ctx.fillStyle = backgroundColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+// ─── Triangle ────────────────────────────────────────────────
+
+function renderTriangle(
+    ctx: CanvasRenderingContext2D,
+    element: ExcalidrawElement,
+) {
+    const { x, y, width, height, backgroundColor } = element;
+    const x1 = Math.min(x, x + width);
+    const y1 = Math.min(y, y + height);
+    const x2 = Math.max(x, x + width);
+    const y2 = Math.max(y, y + height);
+    const cx = (x1 + x2) / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, y1);    // top center
+    ctx.lineTo(x2, y2);    // bottom right
+    ctx.lineTo(x1, y2);    // bottom left
+    ctx.closePath();
+
+    if (backgroundColor && backgroundColor !== 'transparent') {
+        ctx.fillStyle = backgroundColor;
+        ctx.fill();
+    }
+    ctx.stroke();
 }
 
 // ─── Line / Draw ─────────────────────────────────────────────

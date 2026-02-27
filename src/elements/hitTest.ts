@@ -59,6 +59,96 @@ function hitTestRectangle(
     return inside;
 }
 
+function hitTestEllipse(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number,
+): boolean {
+    const { x, y, width, height, angle } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+
+    const rp = angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -angle)
+        : point;
+
+    const rx = Math.abs(width / 2) + threshold;
+    const ry = Math.abs(height / 2) + threshold;
+    if (rx === 0 || ry === 0) return false;
+
+    const dx = rp.x - cx;
+    const dy = rp.y - cy;
+    return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1;
+}
+
+/** Test if point is inside a convex polygon using cross-product winding. */
+function pointInPolygon(p: Point, vertices: Point[]): boolean {
+    const n = vertices.length;
+    let positive = 0;
+    let negative = 0;
+    for (let i = 0; i < n; i++) {
+        const a = vertices[i];
+        const b = vertices[(i + 1) % n];
+        const cross = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+        if (cross > 0) positive++;
+        else if (cross < 0) negative++;
+        if (positive > 0 && negative > 0) return false;
+    }
+    return true;
+}
+
+function hitTestDiamond(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number,
+): boolean {
+    const { x, y, width, height, angle } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+
+    const rp = angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -angle)
+        : point;
+
+    const hw = Math.abs(width / 2) + threshold;
+    const hh = Math.abs(height / 2) + threshold;
+
+    const verts: Point[] = [
+        { x: cx, y: cy - hh },
+        { x: cx + hw, y: cy },
+        { x: cx, y: cy + hh },
+        { x: cx - hw, y: cy },
+    ];
+    return pointInPolygon(rp, verts);
+}
+
+function hitTestTriangle(
+    point: Point,
+    element: ExcalidrawElement,
+    threshold: number,
+): boolean {
+    const { x, y, width, height, angle } = element;
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+
+    const rp = angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -angle)
+        : point;
+
+    const x1 = Math.min(x, x + width) - threshold;
+    const y1 = Math.min(y, y + height) - threshold;
+    const x2 = Math.max(x, x + width) + threshold;
+    const y2 = Math.max(y, y + height) + threshold;
+    const topCx = (x1 + x2) / 2;
+
+    const verts: Point[] = [
+        { x: topCx, y: y1 },
+        { x: x2, y: y2 },
+        { x: x1, y: y2 },
+    ];
+    return pointInPolygon(rp, verts);
+}
+
 function hitTestLinear(
     point: Point,
     element: ExcalidrawElement & { points: Point[] },
@@ -124,6 +214,12 @@ export function hitTestElement(
     switch (element.type) {
         case 'rectangle':
             return hitTestRectangle(point, element, threshold);
+        case 'ellipse':
+            return hitTestEllipse(point, element, threshold);
+        case 'diamond':
+            return hitTestDiamond(point, element, threshold);
+        case 'triangle':
+            return hitTestTriangle(point, element, threshold);
         case 'line':
         case 'arrow':
         case 'draw':

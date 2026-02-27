@@ -19,8 +19,6 @@ import {
     MIN_ZOOM,
     MAX_ZOOM,
     ZOOM_STEP,
-    ARROWHEAD_LENGTH,
-    ARROWHEAD_WIDTH,
 } from '../constants';
 
 // ─── Type Guards ─────────────────────────────────────────────
@@ -33,6 +31,8 @@ interface UseCanvasDrawingOptions {
     activeTool: Tool;
     width: number;
     height: number;
+    canvasBg?: string;
+    strokeColor?: string;
 }
 
 export interface TextEditState {
@@ -43,7 +43,7 @@ export interface TextEditState {
     initialText: string;
 }
 
-export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawingOptions) {
+export function useCanvasDrawing({ activeTool, width, height, canvasBg, strokeColor }: UseCanvasDrawingOptions) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [elements, setElements] = useState<ExcalidrawElement[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -83,7 +83,14 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
 
         ctx.save();
         ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, width, height);
+
+        // Fill background (theme-aware)
+        if (canvasBg) {
+            ctx.fillStyle = canvasBg;
+            ctx.fillRect(0, 0, width, height);
+        } else {
+            ctx.clearRect(0, 0, width, height);
+        }
         ctx.translate(panOffset.x, panOffset.y);
         ctx.scale(zoom, zoom);
 
@@ -137,7 +144,7 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
         }
 
         ctx.restore();
-    }, [elements, width, height, panOffset, selectedIds, zoom, textEdit]);
+    }, [elements, width, height, panOffset, selectedIds, zoom, textEdit, canvasBg]);
 
     useEffect(() => {
         repaint();
@@ -170,7 +177,7 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
     // ─── Tool helpers ─────────────────────────────────────────
 
     const isDrawingTool = (tool: Tool): boolean =>
-        tool === 'rectangle' || tool === 'line' || tool === 'arrow' || tool === 'pen';
+        tool === 'rectangle' || tool === 'ellipse' || tool === 'diamond' || tool === 'triangle' || tool === 'line' || tool === 'arrow' || tool === 'pen';
 
     const toCanvas = useCallback((clientX: number, clientY: number): Point => {
         const canvas = canvasRef.current;
@@ -307,14 +314,16 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
                         x: cp.x,
                         y: cp.y,
                         points: [{ x: 0, y: 0 }],
+                        ...(strokeColor ? { strokeColor } : {}),
                     } as any,
                 );
-            } else if (activeTool === 'rectangle') {
-                el = createElement('rectangle', {
+            } else if (activeTool === 'rectangle' || activeTool === 'ellipse' || activeTool === 'diamond' || activeTool === 'triangle') {
+                el = createElement(activeTool, {
                     x: cp.x,
                     y: cp.y,
                     width: 0,
                     height: 0,
+                    ...(strokeColor ? { strokeColor } : {}),
                 });
             } else {
                 return;
@@ -389,7 +398,7 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
             const start = startPointRef.current;
             const el = currentElementRef.current;
 
-            if (el.type === 'rectangle') {
+            if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'diamond' || el.type === 'triangle') {
                 currentElementRef.current = {
                     ...el,
                     width: cp.x - start.x,
@@ -573,6 +582,7 @@ export function useCanvasDrawing({ activeTool, width, height }: UseCanvasDrawing
                     fontFamily,
                     width: maxWidth,
                     height: measuredHeight,
+                    ...(strokeColor ? { strokeColor } : {}),
                 } as any);
                 setElements((prev) => [...prev, el]);
             }

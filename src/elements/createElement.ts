@@ -1,6 +1,9 @@
 import type {
     NoteboardElementBase,
     RectangleElement,
+    EllipseElement,
+    DiamondElement,
+    TriangleElement,
     LineElement,
     ArrowElement,
     TextElement,
@@ -58,6 +61,33 @@ export function createRectangleElement(
         ...baseDefaults(overrides),
         type: 'rectangle',
     } as RectangleElement;
+}
+
+export function createEllipseElement(
+    overrides: Partial<EllipseElement> = {},
+): EllipseElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'ellipse',
+    } as EllipseElement;
+}
+
+export function createDiamondElement(
+    overrides: Partial<DiamondElement> = {},
+): DiamondElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'diamond',
+    } as DiamondElement;
+}
+
+export function createTriangleElement(
+    overrides: Partial<TriangleElement> = {},
+): TriangleElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'triangle',
+    } as TriangleElement;
 }
 
 export function createLineElement(
@@ -125,6 +155,12 @@ export function createElement(
     switch (type) {
         case 'rectangle':
             return createRectangleElement(overrides as Partial<RectangleElement>);
+        case 'ellipse':
+            return createEllipseElement(overrides as Partial<EllipseElement>);
+        case 'diamond':
+            return createDiamondElement(overrides as Partial<DiamondElement>);
+        case 'triangle':
+            return createTriangleElement(overrides as Partial<TriangleElement>);
         case 'line':
             return createLineElement(overrides as Partial<LineElement>);
         case 'arrow':
