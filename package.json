@@ -19,7 +19,7 @@
     "url": "git+https://github.com/sunaissu/noteboard.git"
   },
   "license": "MIT",
-  "author": "Brett Galvez",
+  "author": "sunaissu",
   "type": "commonjs",
   "exports": {
     ".": {
