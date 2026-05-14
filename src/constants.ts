@@ -27,3 +27,29 @@ export const ZOOM_STEP = 1.1;
 
 export const ARROWHEAD_LENGTH = 14;
 export const ARROWHEAD_WIDTH = 5;
+
+// ─── Resize / Rotation Handles ───────────────────────────────
+
+export const HANDLE_SIZE = 6;
+export const MULTI_SELECTION_OPACITY = 0.5;
+export const HANDLE_FILL = '#ffffff';
+export const HANDLE_STROKE = '#4A90D9';
+export const ROTATION_HANDLE_OFFSET = 25;
+export const ROTATION_SNAP_ANGLE = Math.PI / 12; // 15°
+
+// ─── Grid & Snap ─────────────────────────────────────────────
+
+export const GRID_SIZE = 20;
+export const SNAP_THRESHOLD = 6;
+export const GRID_COLOR_LIGHT = 'rgba(0,0,0,0.07)';
+export const GRID_COLOR_DARK  = 'rgba(255,255,255,0.06)';
+
+// ─── Nudge ───────────────────────────────────────────────────
+
+export const NUDGE_STEP = 1;
+export const NUDGE_STEP_LARGE = 10;
+
+// ─── Align / Smart Guides ───────────────────────────────────
+
+export const GUIDE_COLOR = '#f03e3e';
+export const GUIDE_WIDTH = 1;

@@ -10,6 +10,11 @@ import {
     ArrowUpRightIcon,
     EraserIcon,
     PenIcon,
+    FrameCornersIcon,
+    StarIcon,
+    ImageIcon,
+    NoteBlankIcon,
+    ChatCircleIcon,
 } from '@phosphor-icons/react';
 import type { Tool, ToolDefinition, ToolSlot } from './types';
 
@@ -25,9 +30,14 @@ export const TOOL_REGISTRY: Record<Tool, ToolDefinition> = {
     pen: { id: 'pen', label: 'Pen', icon: PenIcon },
     text: { id: 'text', label: 'Text', icon: TextTIcon },
     eraser: { id: 'eraser', label: 'Eraser', icon: EraserIcon },
+    image: { id: 'image', label: 'Image', icon: ImageIcon },
+    frame: { id: 'frame', label: 'Frame', icon: FrameCornersIcon },
+    star: { id: 'star', label: 'Star', icon: StarIcon },
+    'sticky-note': { id: 'sticky-note', label: 'Sticky Note', icon: NoteBlankIcon },
+    callout: { id: 'callout', label: 'Callout', icon: ChatCircleIcon },
 };
 
-export const SHAPE_VARIANTS: Tool[] = ['rectangle', 'ellipse', 'diamond', 'triangle'];
+export const SHAPE_VARIANTS: Tool[] = ['rectangle', 'ellipse', 'diamond', 'triangle', 'star'];
 
 export const DEFAULT_SLOTS: ToolSlot[] = [
     { position: 1, toolId: 'select' },
@@ -38,9 +48,11 @@ export const DEFAULT_SLOTS: ToolSlot[] = [
     { position: 6, toolId: 'pen' },
     { position: 7, toolId: 'text' },
     { position: 8, toolId: 'eraser' },
+    { position: 9, toolId: 'image' },
 ];
 
 export const ALL_TOOLS: Tool[] = [
     'select', 'pan', 'rectangle', 'ellipse', 'diamond', 'triangle',
-    'line', 'text', 'arrow', 'eraser', 'pen',
+    'line', 'text', 'arrow', 'eraser', 'pen', 'image',
+    'frame', 'star', 'sticky-note', 'callout',
 ];

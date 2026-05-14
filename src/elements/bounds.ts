@@ -1,4 +1,4 @@
-import type { Bounds, Point, ExcalidrawElement } from './types';
+import type { Bounds, Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
 
 // ─── Point-set Bounds ────────────────────────────────────────
@@ -68,7 +68,7 @@ export function getRotatedBounds(
  * For linear elements the bounds are derived from their point arrays.
  * For all elements, rotation is taken into account.
  */
-export function getElementBounds(element: ExcalidrawElement): Bounds {
+export function getElementBounds(element: NoteboardElement): Bounds {
     const { x, y, width, height, angle } = element;
     const cx = x + width / 2;
     const cy = y + height / 2;

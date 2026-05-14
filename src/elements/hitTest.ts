@@ -1,6 +1,5 @@
-import type { Point, ExcalidrawElement } from './types';
-import { isLinearElement } from './types';
-import { rotatePoint, getElementBounds, pointInBounds } from './bounds';
+import type { Point, NoteboardElement } from './types';
+import { rotatePoint, getElementBounds } from './bounds';
 
 // ─── Geometry Helpers ────────────────────────────────────────
 
@@ -32,7 +31,7 @@ export function distanceToLineSegment(
 
 function hitTestRectangle(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number,
 ): boolean {
     const { x, y, width, height, angle } = element;
@@ -61,7 +60,7 @@ function hitTestRectangle(
 
 function hitTestEllipse(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number,
 ): boolean {
     const { x, y, width, height, angle } = element;
@@ -99,7 +98,7 @@ function pointInPolygon(p: Point, vertices: Point[]): boolean {
 
 function hitTestDiamond(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number,
 ): boolean {
     const { x, y, width, height, angle } = element;
@@ -124,7 +123,7 @@ function hitTestDiamond(
 
 function hitTestTriangle(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number,
 ): boolean {
     const { x, y, width, height, angle } = element;
@@ -151,7 +150,7 @@ function hitTestTriangle(
 
 function hitTestLinear(
     point: Point,
-    element: ExcalidrawElement & { points: Point[] },
+    element: NoteboardElement & { points: Point[] },
     threshold: number,
 ): boolean {
     const { x, y, angle } = element;
@@ -185,7 +184,7 @@ function hitTestLinear(
 
 function hitTestText(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number,
 ): boolean {
     // For text we use the bounding box expanded by threshold
@@ -206,7 +205,7 @@ function hitTestText(
  */
 export function hitTestElement(
     point: Point,
-    element: ExcalidrawElement,
+    element: NoteboardElement,
     threshold: number = 10,
 ): boolean {
     if (element.isDeleted) return false;
@@ -226,11 +225,18 @@ export function hitTestElement(
         case 'pen':
             return hitTestLinear(
                 point,
-                element as ExcalidrawElement & { points: Point[] },
+                element as NoteboardElement & { points: Point[] },
                 threshold,
             );
         case 'text':
             return hitTestText(point, element, threshold);
+        case 'image':
+        case 'frame':
+            return hitTestRectangle(point, element, threshold);
+        case 'star': {
+            // Use bounding box hit test for star (polygon internals are complex)
+            return hitTestRectangle(point, element, threshold);
+        }
         default:
             return false;
     }
@@ -243,10 +249,10 @@ export function hitTestElement(
  * selection rectangle (marquee selection).
  */
 export function getElementsInBounds(
-    elements: readonly ExcalidrawElement[],
+    elements: readonly NoteboardElement[],
     selectionBounds: [number, number, number, number],
     threshold: number = 0,
-): ExcalidrawElement[] {
+): NoteboardElement[] {
     const [sx1, sy1, sx2, sy2] = selectionBounds;
     const normalized: [number, number, number, number] = [
         Math.min(sx1, sx2) - threshold,

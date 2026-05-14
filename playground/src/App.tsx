@@ -1,6 +1,6 @@
 import { Noteboard } from '@sunaissu/noteboard'
-import type { Tool, ToolSlot } from '@sunaissu/noteboard'
-import { useState } from 'react'
+import type { Tool, ToolSlot, NoteboardRef } from '@sunaissu/noteboard'
+import { useState, useRef, useCallback } from 'react'
 
 const customSlots: ToolSlot[] = [
     { position: 1, toolId: 'select' },
@@ -11,12 +11,57 @@ const customSlots: ToolSlot[] = [
     { position: 6, toolId: 'pen' },
     { position: 7, toolId: 'text' },
     { position: 8, toolId: 'eraser' },
+    { position: 9, toolId: 'image' },
 ]
 
 function App() {
     const [activeTool, setActiveTool] = useState<Tool>('select')
     const [position, setPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom')
-    const [propertiesPosition, setPropertiesPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom')
+    const [propertiesPosition, setPropertiesPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('left')
+    const noteboardRef = useRef<NoteboardRef>(null)
+
+    const handleExportPNG = useCallback(() => {
+        if (!noteboardRef.current) return
+        const dataUrl = noteboardRef.current.exportImage('png')
+        const a = document.createElement('a')
+        a.href = dataUrl
+        a.download = 'noteboard-export.png'
+        a.click()
+    }, [])
+
+    const handleExportJSON = useCallback(() => {
+        if (!noteboardRef.current) return
+        const elements = noteboardRef.current.getElements()
+        const json = JSON.stringify(elements, null, 2)
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'noteboard-export.json'
+        a.click()
+        URL.revokeObjectURL(url)
+    }, [])
+
+    const btnStyle = (active: boolean, color: string) => ({
+        padding: '4px 12px',
+        borderRadius: 6,
+        border: '1px solid #ccc',
+        background: active ? color : '#fff',
+        color: active ? '#fff' : '#333',
+        cursor: 'pointer',
+        fontSize: 13,
+    })
+
+    const exportBtnStyle = {
+        padding: '6px 14px',
+        borderRadius: 6,
+        border: '1px solid #ccc',
+        background: '#228be6',
+        color: '#fff',
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 500 as const,
+    }
 
     return (
         <div style={{ fontFamily: 'system-ui, sans-serif', padding: 20 }}>
@@ -27,14 +72,7 @@ function App() {
                     <button
                         key={pos}
                         onClick={() => setPosition(pos)}
-                        style={{
-                            padding: '4px 12px',
-                            borderRadius: 6,
-                            border: '1px solid #ccc',
-                            background: position === pos ? '#6c47ff' : '#fff',
-                            color: position === pos ? '#fff' : '#333',
-                            cursor: 'pointer',
-                        }}
+                        style={btnStyle(position === pos, '#6c47ff')}
                     >
                         {pos}
                     </button>
@@ -50,18 +88,20 @@ function App() {
                     <button
                         key={pos}
                         onClick={() => setPropertiesPosition(pos)}
-                        style={{
-                            padding: '4px 12px',
-                            borderRadius: 6,
-                            border: '1px solid #ccc',
-                            background: propertiesPosition === pos ? '#e8590c' : '#fff',
-                            color: propertiesPosition === pos ? '#fff' : '#333',
-                            cursor: 'pointer',
-                        }}
+                        style={btnStyle(propertiesPosition === pos, '#e8590c')}
                     >
                         {pos}
                     </button>
                 ))}
+
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <button onClick={handleExportPNG} style={exportBtnStyle}>
+                        📥 Export PNG
+                    </button>
+                    <button onClick={handleExportJSON} style={{ ...exportBtnStyle, background: '#40c057' }}>
+                        📋 Export JSON
+                    </button>
+                </span>
             </div>
 
             <div
@@ -75,6 +115,7 @@ function App() {
                 }}
             >
                 <Noteboard
+                    ref={noteboardRef}
                     slots={customSlots}
                     toolbarPosition={position}
                     activeTool={activeTool}

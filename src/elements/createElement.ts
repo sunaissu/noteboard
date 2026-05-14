@@ -9,7 +9,12 @@ import type {
     TextElement,
     DrawElement,
     PenElement,
-    ExcalidrawElement,
+    ImageElement,
+    StickyNoteElement,
+    FrameElement,
+    StarElement,
+    CalloutElement,
+    NoteboardElement,
 } from './types';
 import {
     DEFAULT_FONT_SIZE,
@@ -42,7 +47,7 @@ function baseDefaults(overrides: Partial<NoteboardElementBase> = {}): NoteboardE
         strokeWidth: 2,
         strokeStyle: 'solid',
         opacity: 100,
-        roughness: 1,
+        roughness: 0,
         seed: Math.floor(Math.random() * 2_000_000_000),
         isDeleted: false,
         ...overrides,
@@ -60,6 +65,11 @@ export function createRectangleElement(
     return {
         ...baseDefaults(overrides),
         type: 'rectangle',
+        borderRadius: overrides.borderRadius ?? 0,
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
     } as RectangleElement;
 }
 
@@ -69,6 +79,10 @@ export function createEllipseElement(
     return {
         ...baseDefaults(overrides),
         type: 'ellipse',
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
     } as EllipseElement;
 }
 
@@ -78,6 +92,10 @@ export function createDiamondElement(
     return {
         ...baseDefaults(overrides),
         type: 'diamond',
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
     } as DiamondElement;
 }
 
@@ -87,6 +105,10 @@ export function createTriangleElement(
     return {
         ...baseDefaults(overrides),
         type: 'triangle',
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
     } as TriangleElement;
 }
 
@@ -97,6 +119,7 @@ export function createLineElement(
         ...baseDefaults(overrides),
         type: 'line',
         points: overrides.points ?? [],
+        curveType: overrides.curveType ?? 'straight',
     } as LineElement;
 }
 
@@ -109,6 +132,7 @@ export function createArrowElement(
         points: overrides.points ?? [],
         startArrowhead: overrides.startArrowhead ?? null,
         endArrowhead: overrides.endArrowhead ?? 'arrow',
+        curveType: overrides.curveType ?? 'straight',
     } as ArrowElement;
 }
 
@@ -145,13 +169,90 @@ export function createPenElement(
         points: overrides.points ?? [],
     } as PenElement;
 }
+// ─── Image ───────────────────────────────────────────────────
 
-// ─── Generic Dispatcher ──────────────────────────────────────
+export function createImageElement(
+    overrides: Partial<ImageElement> = {},
+): ImageElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'image',
+        dataUrl: overrides.dataUrl ?? '',
+    } as ImageElement;
+}
+
+// ─── Phase 2 Creators ─────────────────────────────────────────────
+
+export function createStickyNoteElement(
+    overrides: Partial<StickyNoteElement> = {},
+): StickyNoteElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'sticky-note',
+        noteColor: overrides.noteColor ?? 'yellow',
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
+        backgroundColor: overrides.backgroundColor ?? '#ffd60a',
+        strokeColor: overrides.strokeColor ?? '#a08c00',
+        strokeWidth: overrides.strokeWidth ?? 1,
+        roughness: overrides.roughness ?? 0,
+    } as StickyNoteElement;
+}
+
+export function createFrameElement(
+    overrides: Partial<FrameElement> = {},
+): FrameElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'frame',
+        name: overrides.name ?? 'Frame',
+        frameColor: overrides.frameColor ?? '#4A90D9',
+        showLabel: overrides.showLabel ?? true,
+        childIds: overrides.childIds ?? [],
+        backgroundColor: overrides.backgroundColor ?? 'transparent',
+        strokeColor: overrides.strokeColor ?? '#4A90D9',
+        strokeWidth: overrides.strokeWidth ?? 1,
+        roughness: overrides.roughness ?? 0,
+    } as FrameElement;
+}
+
+export function createStarElement(
+    overrides: Partial<StarElement> = {},
+): StarElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'star',
+        sides: overrides.sides ?? 5,
+        isStar: overrides.isStar ?? true,
+        innerRadius: overrides.innerRadius ?? 0.4,
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
+    } as StarElement;
+}
+
+export function createCalloutElement(
+    overrides: Partial<CalloutElement> = {},
+): CalloutElement {
+    return {
+        ...baseDefaults(overrides),
+        type: 'callout',
+        tailDirection: overrides.tailDirection ?? 'bottom-left',
+        text: overrides.text ?? '',
+        fontSize: overrides.fontSize ?? DEFAULT_FONT_SIZE,
+        fontFamily: overrides.fontFamily ?? DEFAULT_FONT_FAMILY,
+        textAlign: overrides.textAlign ?? 'center',
+    } as CalloutElement;
+}
+
 
 export function createElement(
-    type: ExcalidrawElement['type'],
-    overrides: Partial<ExcalidrawElement> = {},
-): ExcalidrawElement {
+    type: NoteboardElement['type'],
+    overrides: Partial<NoteboardElement> = {},
+): NoteboardElement {
     switch (type) {
         case 'rectangle':
             return createRectangleElement(overrides as Partial<RectangleElement>);
@@ -171,6 +272,12 @@ export function createElement(
             return createDrawElement(overrides as Partial<DrawElement>);
         case 'pen':
             return createPenElement(overrides as Partial<PenElement>);
+        case 'image':
+            return createImageElement(overrides as Partial<ImageElement>);
+        case 'frame':
+            return createFrameElement(overrides as Partial<FrameElement>);
+        case 'star':
+            return createStarElement(overrides as Partial<StarElement>);
         default:
             throw new Error(`Unknown element type: ${type}`);
     }

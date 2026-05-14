@@ -1,4 +1,4 @@
-import type { Point, ExcalidrawElement } from './types';
+import type { Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
 
 // ─── Absolute Coordinates ────────────────────────────────────
@@ -9,7 +9,7 @@ import { isLinearElement } from './types';
  * Returns [x1, y1, x2, y2] where (x1,y1) is always the top-left.
  */
 export function getElementAbsoluteCoords(
-    element: ExcalidrawElement,
+    element: NoteboardElement,
 ): [number, number, number, number] {
     const { x, y, width, height } = element;
 
@@ -40,7 +40,7 @@ export function getElementAbsoluteCoords(
 // ─── Center Point ────────────────────────────────────────────
 
 /** Get the center of an element. */
-export function getCenterPoint(element: ExcalidrawElement): Point {
+export function getCenterPoint(element: NoteboardElement): Point {
     const [x1, y1, x2, y2] = getElementAbsoluteCoords(element);
     return {
         x: (x1 + x2) / 2,
@@ -55,7 +55,7 @@ export function getCenterPoint(element: ExcalidrawElement): Point {
  * screen-space coordinates.
  */
 export function getLinearElementAbsolutePoints(
-    element: ExcalidrawElement & { points: Point[] },
+    element: NoteboardElement & { points: Point[] },
 ): Point[] {
     return element.points.map((p) => ({
         x: element.x + p.x,

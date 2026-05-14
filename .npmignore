@@ -1,0 +1,22 @@
+# Development and source files
+src/
+playground/
+
+# Config files
+tsconfig.json
+tsup.config.ts
+vite.config.ts
+.eslintrc*
+.prettierrc*
+.gitignore
+
+# Tests and workflows
+tests/
+__tests__/
+.github/
+
+# Keep dist and important files
+!dist/
+!package.json
+!README.md
+!LICENSE

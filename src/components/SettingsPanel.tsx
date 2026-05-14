@@ -1,15 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNoteboardTheme } from '../ThemeContext';
-import { List, X, Moon, Sun } from '@phosphor-icons/react';
+import { List, X, Moon, Sun, FloppyDisk, DownloadSimple, Trash, GridNine, Export, UploadSimple } from '@phosphor-icons/react';
 
 export interface SettingsPanelProps {
     isDark: boolean;
     onToggleDark: () => void;
+    showGrid: boolean;
+    onToggleGrid: () => void;
+    /** When provided, a Save button appears in the panel */
+    onSave?: () => void;
+    onExportImage?: (format: 'png' | 'jpeg') => void;
+    onExportJSON?: () => void;
+    onImportJSON?: () => void;
+    onClearCanvas?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     isDark,
     onToggleDark,
+    showGrid,
+    onToggleGrid,
+    onSave,
+    onExportImage,
+    onExportJSON,
+    onImportJSON,
+    onClearCanvas,
 }) => {
     const theme = useNoteboardTheme();
     const [open, setOpen] = useState(false);
@@ -106,7 +121,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             textTransform: 'uppercase',
                         }}
                     >
-                        Settings
+                        Menu
                     </span>
                     <button
                         onClick={() => setOpen(false)}
@@ -137,64 +152,209 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
                 {/* Panel content */}
                 <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
-                    {/* ── Theme toggle ── */}
+                    {/* ── View Options ── */}
                     <div
                         style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
+                            flexDirection: 'column',
+                            gap: 16,
+                            paddingBottom: 16,
+                            borderBottom: theme.panelBorder,
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {isDark ? (
-                                <Moon size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
-                            ) : (
-                                <Sun size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
-                            )}
-                            <span
+                        {/* Theme toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {isDark ? (
+                                    <Moon size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                ) : (
+                                    <Sun size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                )}
+                                <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>
+                                    Dark Mode
+                                </span>
+                            </div>
+
+                            <button
+                                onClick={onToggleDark}
+                                role="switch"
+                                aria-checked={isDark}
                                 style={{
-                                    fontSize: 13,
-                                    color: theme.panelTextColor,
-                                    fontWeight: 500,
+                                    position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
+                                    cursor: 'pointer', background: isDark ? '#7c5cff' : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
                                 }}
                             >
-                                Dark Mode
-                            </span>
+                                <span style={{ position: 'absolute', top: 2, left: isDark ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                            </button>
                         </div>
 
-                        {/* Toggle switch */}
-                        <button
-                            onClick={onToggleDark}
-                            role="switch"
-                            aria-checked={isDark}
+                        {/* Grid toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <GridNine size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>
+                                    Show Grid
+                                </span>
+                            </div>
+
+                            <button
+                                onClick={onToggleGrid}
+                                role="switch"
+                                aria-checked={showGrid}
+                                style={{
+                                    position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
+                                    cursor: 'pointer', background: showGrid ? '#7c5cff' : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                                }}
+                            >
+                                <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ── Actions ── */}
+                    <div style={{ paddingTop: 16, borderBottom: theme.panelBorder, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {/* Save Board */}
+                        {onSave && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <FloppyDisk size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                    <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Save Board</span>
+                                </div>
+                                <button
+                                    onClick={() => { onSave(); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 12px', border: 'none', borderRadius: 7, cursor: 'pointer', background: '#7c5cff', color: '#fff', fontSize: 12, fontWeight: 600, transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Export PNG */}
+                        {onExportImage && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <DownloadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                    <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Export PNG</span>
+                                </div>
+                                <button
+                                    onClick={() => { onExportImage('png'); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    Export
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Export JPEG */}
+                        {onExportImage && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <DownloadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                    <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Export JPEG</span>
+                                </div>
+                                <button
+                                    onClick={() => { onExportImage('jpeg'); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    Export
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Export JSON */}
+                        {onExportJSON && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Export size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                    <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Save to File</span>
+                                </div>
+                                <button
+                                    onClick={() => { onExportJSON(); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Import JSON */}
+                        {onImportJSON && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <UploadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                    <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Load from File</span>
+                                </div>
+                                <button
+                                    onClick={() => { onImportJSON(); setOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    Open
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Clear Canvas ── */}
+                    {onClearCanvas && (
+                        <div
                             style={{
-                                position: 'relative',
-                                width: 40,
-                                height: 22,
-                                borderRadius: 11,
-                                border: 'none',
-                                cursor: 'pointer',
-                                background: isDark ? '#7c5cff' : '#ccc',
-                                transition: 'background 0.2s',
-                                padding: 0,
-                                flexShrink: 0,
+                                marginTop: 16,
+                                paddingTop: 16,
+                                borderTop: theme.panelBorder,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
                             }}
                         >
-                            <span
-                                style={{
-                                    position: 'absolute',
-                                    top: 2,
-                                    left: isDark ? 20 : 2,
-                                    width: 18,
-                                    height: 18,
-                                    borderRadius: '50%',
-                                    background: '#fff',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                                    transition: 'left 0.2s',
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Trash size={16} weight="fill" style={{ color: '#ff4d4f' }} />
+                                <span
+                                    style={{
+                                        fontSize: 13,
+                                        color: '#ff4d4f',
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Clear Canvas
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    onClearCanvas();
+                                    setOpen(false);
                                 }}
-                            />
-                        </button>
-                    </div>
+                                title="Clear all elements"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '5px 12px',
+                                    border: 'none',
+                                    borderRadius: 7,
+                                    cursor: 'pointer',
+                                    background: 'rgba(255, 77, 79, 0.1)',
+                                    color: '#ff4d4f',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    transition: 'background 0.15s',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.2)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 77, 79, 0.1)'; }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </>

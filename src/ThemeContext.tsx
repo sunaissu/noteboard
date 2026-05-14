@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 
 // ─── Theme Token Interface ───────────────────────────────────
 
@@ -38,8 +38,8 @@ export const LIGHT_THEME: NoteboardTheme = {
 
     toolbarBg: '#ffffff',
     toolbarShadow: '0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
-    buttonActiveBg: '#e8e0ff',
-    buttonActiveColor: '#6c47ff',
+    buttonActiveBg: '#e3f2fd',
+    buttonActiveColor: '#1976d2',
     buttonHoverBg: '#f2f2f2',
     buttonDefaultColor: '#444444',
     badgeColor: '#999999',
@@ -61,8 +61,8 @@ export const DARK_THEME: NoteboardTheme = {
 
     toolbarBg: '#2a2a2a',
     toolbarShadow: '0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
-    buttonActiveBg: '#3d2e6b',
-    buttonActiveColor: '#b49aff',
+    buttonActiveBg: '#0d47a1',
+    buttonActiveColor: '#90caf9',
     buttonHoverBg: '#3a3a3a',
     buttonDefaultColor: '#cccccc',
     badgeColor: '#777777',

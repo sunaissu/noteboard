@@ -19,6 +19,8 @@ export const SHAPE_KEYS: Record<string, ShapeVariant> = {
     o: 'ellipse',
     d: 'diamond',
     t: 'triangle',
+    f: 'frame',
+    s: 'star',
 };
 
 // Reverse lookup: shape → key letter
@@ -106,7 +108,7 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                     <button
                         key={shape}
                         onClick={() => onSelectShape(shape)}
-                        title={`${def.label} (${keyLabel})`}
+                        title={keyLabel ? `${def.label} (${keyLabel})` : def.label}
                         style={{
                             position: 'relative',
                             display: 'flex',
@@ -133,21 +135,23 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                         }}
                     >
                         <Icon size={20} weight={isActive ? 'fill' : 'regular'} />
-                        {/* Shortcut key badge */}
-                        <span
-                            style={{
-                                position: 'absolute',
-                                bottom: 2,
-                                right: 2,
-                                fontSize: 9,
-                                lineHeight: 1,
-                                color: theme.badgeColor,
-                                fontFamily: 'system-ui, sans-serif',
-                                pointerEvents: 'none',
-                            }}
-                        >
-                            {keyLabel}
-                        </span>
+                        {/* Shortcut key badge — only shown when bound to a key */}
+                        {keyLabel && (
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 2,
+                                    right: 2,
+                                    fontSize: 9,
+                                    lineHeight: 1,
+                                    color: theme.badgeColor,
+                                    fontFamily: 'system-ui, sans-serif',
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                {keyLabel}
+                            </span>
+                        )}
                     </button>
                 );
             })}

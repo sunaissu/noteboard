@@ -1,10 +1,14 @@
 // Element types and type guards
 export type {
     Point,
+    PressurePoint,
     Bounds,
     FillStyle,
     StrokeStyle,
     Arrowhead,
+    BlendMode,
+    RoutingMode,
+    DropShadow,
     NoteboardElementBase,
     RectangleElement,
     EllipseElement,
@@ -15,9 +19,14 @@ export type {
     TextElement,
     DrawElement,
     PenElement,
-    ExcalidrawElement,
+    ImageElement,
+    StickyNoteElement,
+    FrameElement,
+    StarElement,
+    CalloutElement,
+    NoteboardElement,
 } from './types';
-export { isLinearElement, isShapeElement } from './types';
+export { isLinearElement, isShapeElement, hasShapeText, isLockedElement } from './types';
 
 // Element creation
 export {
@@ -32,6 +41,10 @@ export {
     createTextElement,
     createDrawElement,
     createPenElement,
+    createStickyNoteElement,
+    createFrameElement,
+    createStarElement,
+    createCalloutElement,
 } from './createElement';
 
 // Bounding-box calculations
