@@ -2,6 +2,7 @@ export { Noteboard } from './Noteboard';
 export { Toolbar } from './components/Toolbar';
 export { SettingsPanel } from './components/SettingsPanel';
 export { PropertiesPanel } from './components/PropertiesPanel';
+export { NoteboardPreview } from './components/NoteboardPreview';
 export { useToolbarShortcuts } from './hooks/useToolbarShortcuts';
 export { useCanvasDrawing } from './hooks/useCanvasDrawing';
 export { useHistory } from './hooks/useHistory';

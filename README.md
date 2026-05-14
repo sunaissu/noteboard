@@ -92,6 +92,29 @@ export function MultiplayerBoard() {
 }
 ```
 
+## 🖼️ Lightweight Previews
+
+If you want to render a static, read-only snapshot of a board without the overhead of mounting the full interactive `<Noteboard />`, you can use the `<NoteboardPreview />` component. It uses the same highly optimized rendering engine to draw onto a small canvas, but uses zero React state or event listeners.
+
+```tsx
+import { NoteboardPreview } from '@sunaissu/noteboard';
+import type { NoteboardElement } from '@sunaissu/noteboard';
+
+export function DashboardCard({ elements }: { elements: NoteboardElement[] }) {
+    return (
+        <div className="card">
+            <h3>My Board</h3>
+            {/* Renders a zoomed-to-fit static snapshot! */}
+            <NoteboardPreview 
+                elements={elements} 
+                height={120} 
+                style={{ borderRadius: '6px', border: '1px solid #ddd' }} 
+            />
+        </div>
+    );
+}
+```
+
 ## 📜 License
 
 MIT License. See `LICENSE` for details.
