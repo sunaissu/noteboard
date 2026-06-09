@@ -2,7 +2,7 @@ import { TextAaIcon, TextAlignLeftIcon, TextAlignCenterIcon, TextAlignRightIcon,
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, TextElement } from '../../elements/types';
 import { hasShapeText } from '../../elements/types';
-import { SectionLabel, Divider, SliderRow, iconBtnStyle, FONT_FAMILIES } from './primitives';
+import { Divider, CollapsibleSection, SliderRow, iconBtnStyle, FONT_FAMILIES } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -36,7 +36,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Text</SectionLabel>
+            <CollapsibleSection label="Text" theme={theme}>
 
             {/* Font size stepper */}
             <div style={{ marginBottom: 12 }}>
@@ -148,6 +148,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     ))}
                 </div>
             </div>
+            </CollapsibleSection>
         </>
     );
 }

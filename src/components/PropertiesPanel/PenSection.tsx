@@ -1,7 +1,7 @@
 import { HighlighterIcon, WaveTriangleIcon } from '@phosphor-icons/react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, PenElement } from '../../elements/types';
-import { SectionLabel, Divider, ToggleRow, SliderRow } from './primitives';
+import { Divider, CollapsibleSection, ToggleRow, SliderRow } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -17,7 +17,7 @@ export function PenSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Pen</SectionLabel>
+            <CollapsibleSection label="Pen" theme={theme}>
 
             <ToggleRow
                 label="Highlighter Mode"
@@ -34,6 +34,7 @@ export function PenSection({ selectedElements, onUpdate }: Props) {
                 onChange={(v) => onUpdate({ tension: v } as any)}
                 theme={theme}
             />
+            </CollapsibleSection>
         </>
     );
 }

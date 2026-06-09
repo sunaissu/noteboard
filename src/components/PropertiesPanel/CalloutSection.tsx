@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, CalloutElement } from '../../elements/types';
-import { SectionLabel, Divider } from './primitives';
+import { Divider, CollapsibleSection } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -33,8 +33,8 @@ export function CalloutSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Tail Direction</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 12 }}>
+            <CollapsibleSection label="Tail Direction" theme={theme}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 12 }}>
                 {TAIL_OPTIONS.map((opt) => (
                     <button
                         key={opt.key}
@@ -45,7 +45,8 @@ export function CalloutSection({ selectedElements, onUpdate }: Props) {
                         {opt.label}
                     </button>
                 ))}
-            </div>
+                </div>
+            </CollapsibleSection>
         </>
     );
 }

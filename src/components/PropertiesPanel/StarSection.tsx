@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, StarElement } from '../../elements/types';
-import { SectionLabel, Divider, SliderRow } from './primitives';
+import { Divider, CollapsibleSection, SliderRow } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -25,7 +25,7 @@ export function StarSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Shape</SectionLabel>
+            <CollapsibleSection label="Shape" theme={theme}>
 
             {/* Star vs Polygon toggle */}
             <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
@@ -51,6 +51,7 @@ export function StarSection({ selectedElements, onUpdate }: Props) {
                     theme={theme}
                 />
             )}
+            </CollapsibleSection>
         </>
     );
 }

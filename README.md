@@ -1,20 +1,25 @@
 # @sunaissu/noteboard
 
-A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.
+> A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.
 
-![Noteboard Preview](./preview.png) *(Add a screenshot here!)*
+[![npm version](https://img.shields.io/npm/v/@sunaissu/noteboard)](https://www.npmjs.com/package/@sunaissu/noteboard)
+[![license](https://img.shields.io/npm/l/@sunaissu/noteboard)](./LICENSE)
+
+---
 
 ## 🚀 Features
 
-- **Rich Toolset**: Draw shapes (rectangles, ellipses, diamonds, triangles, stars), lines, auto-connecting arrows, text, and freehand (pen).
-- **Advanced Elements**: Built-in support for Tables, Sticky Notes, Callouts, and Image insertion.
-- **Smart Grouping & Locking**: Group shapes together, lock elements in place, and adjust z-order (bring forward/send backward).
-- **Responsive Panels**: Built-in, fully configurable toolbar and properties panel for adjusting color, stroke size, opacity, and typography.
-- **Snap-to-Grid & Alignment Guides**: Built-in smart alignment tools and customizable grid snapping for precise layouts.
-- **Board Management**: Export the canvas as PNG/JPEG, import/export state as JSON, toggle grid visibility, and clear canvas with confirmation.
-- **High-Performance Text Editing**: Optimized text rendering with perfect synchronization between edit and presentation modes.
-- **Dark Mode Support**: Comes with default light/dark themes and allows full custom theme overrides.
-- **Multiplayer Ready**: Completely server-agnostic. Works seamlessly with WebSockets or CRDTs via controlled `elements` and `onElementsChange` props.
+- **Rich Toolset** — Draw shapes (rectangles, ellipses, diamonds, triangles, stars/polygons), lines, auto-connecting arrows, text, freehand pen, and images.
+- **Advanced Elements** — Built-in support for Sticky Notes, Callouts, and Frames.
+- **Smart Grouping & Locking** — Group shapes, lock elements in place, and control z-order.
+- **Collapsible Properties Panel** — The entire panel can be collapsed to a thin header bar. Individual property sections (Appearance, Drop Shadow, Text, Line/Arrow, Pen, Shape, Frame) also collapse independently via chevron toggles.
+- **Snap-to-Grid & Alignment Guides** — Dot-grid overlay, snap-to-grid, and smart alignment tools for precise layouts.
+- **Board Management** — Export as PNG/JPEG, import/export state as JSON, toggle grid visibility, and clear the canvas with a confirmation prompt.
+- **Dark Mode Support** — Default light/dark themes with full custom `NoteboardTheme` override support.
+- **Multiplayer Ready** — Completely server-agnostic. Integrates with WebSockets or CRDTs via controlled `elements` + `onElementsChange` props.
+- **Lightweight Previews** — `NoteboardPreview` renders a static, zero-interaction board thumbnail using the same rendering engine.
+
+---
 
 ## 📦 Installation
 
@@ -26,7 +31,9 @@ yarn add @sunaissu/noteboard @phosphor-icons/react
 pnpm add @sunaissu/noteboard @phosphor-icons/react
 ```
 
-*Note: `@phosphor-icons/react` is required as a peer dependency for the toolbar icons.*
+> `@phosphor-icons/react` is a required peer dependency for toolbar and panel icons.
+
+---
 
 ## 💻 Quick Start
 
@@ -39,82 +46,90 @@ export default function App() {
   const [elements, setElements] = useState<NoteboardElement[]>([]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', margin: 0, padding: 0 }}>
-      <Noteboard 
-        elements={elements} 
-        onElementsChange={setElements} 
-        theme="dark" 
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <Noteboard
+        elements={elements}
+        onElementsChange={setElements}
+        theme="dark"
       />
     </div>
   );
 }
 ```
 
-## 🛠 Props API
+---
 
-The `Noteboard` component accepts several props for deep customization:
+## 🛠 Props API
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `theme` | `'light' \| 'dark' \| NoteboardTheme` | `'dark'` | Sets the active theme. You can pass a custom theme object to override colors. |
-| `initialElements` | `NoteboardElement[]` | `[]` | Used to seed the board on the first mount. Uncontrolled. |
-| `elements` | `NoteboardElement[]` | `undefined` | Fully controlled elements array. Use this alongside `onElementsChange` for real-time collaboration. |
-| `onElementsChange` | `(elements: NoteboardElement[]) => void` | `undefined` | Fires after every local draw, edit, move, or delete action. |
+| `theme` | `'light' \| 'dark' \| NoteboardTheme` | `'dark'` | Active theme. Pass a custom `NoteboardTheme` object to override individual colors. |
+| `initialElements` | `NoteboardElement[]` | `[]` | Seed elements on first mount. Uncontrolled — ignored after mount. |
+| `elements` | `NoteboardElement[]` | `undefined` | Fully controlled elements array. Use alongside `onElementsChange` for real-time collaboration. |
+| `onElementsChange` | `(elements: NoteboardElement[]) => void` | `undefined` | Fires after every local draw, edit, move, or delete. |
 | `toolbarPosition` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'bottom'` | Position of the main toolbar. |
-| `propertiesPosition`| `'top' \| 'bottom' \| 'left' \| 'right'` | `'left'` | Position of the element properties panel. |
-| `slots` | `ToolSlot[]` | `DEFAULT_SLOTS` | Customizes which tools appear in the toolbar. |
-| `onSave` | `(session: NoteboardSession) => void` | `undefined` | If provided, a "Save" button appears in the settings menu, returning a serialized snapshot. |
-| `threadId` | `string` | `undefined` | Used internally to identify the room or thread. |
-| `boardId` | `string` | `undefined` | Used internally to identify the board instance. |
+| `propertiesPosition` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'left'` | Position of the properties panel. |
+| `slots` | `ToolSlot[]` | `DEFAULT_SLOTS` | Customize which tools appear in the toolbar. |
+| `onSave` | `(session: NoteboardSession) => void` | `undefined` | Adds a Save button to the settings menu. Returns a serialized snapshot. |
+| `threadId` | `string` | `undefined` | Identifies the room or thread (used with collaboration integrations). |
+| `boardId` | `string` | `undefined` | Identifies the board instance. |
+
+---
 
 ## 🤝 Multiplayer & Collaboration
 
-Noteboard is designed to be completely server-agnostic. To build a real-time multiplayer board, simply use the controlled `elements` prop and broadcast updates using `onElementsChange`.
+Noteboard is server-agnostic. To build a real-time multiplayer board, pass the `elements` prop directly from your server state and broadcast updates via `onElementsChange`:
 
 ```tsx
 import { Noteboard } from '@sunaissu/noteboard';
-import { useEffect, useState } from 'react';
 import { useWebSocket } from './your-websocket-hook';
 
 export function MultiplayerBoard() {
-    const { elements, sendUpdate } = useWebSocket('wss://your-server.com/room');
-    
-    // elements comes directly from the server state
-    return (
-        <Noteboard 
-            elements={elements} 
-            onElementsChange={(newElements) => {
-                // Broadcast local changes to the server
-                sendUpdate(newElements);
-            }} 
-        />
-    );
+  const { elements, sendUpdate } = useWebSocket('wss://your-server.com/room');
+
+  return (
+    <Noteboard
+      elements={elements}
+      onElementsChange={(newElements) => {
+        sendUpdate(newElements); // Broadcast local changes to the server
+      }}
+    />
+  );
 }
 ```
 
+---
+
 ## 🖼️ Lightweight Previews
 
-If you want to render a static, read-only snapshot of a board without the overhead of mounting the full interactive `<Noteboard />`, you can use the `<NoteboardPreview />` component. It uses the same highly optimized rendering engine to draw onto a small canvas, but uses zero React state or event listeners.
+Use `NoteboardPreview` to render a read-only, static snapshot without mounting the full interactive canvas:
 
 ```tsx
 import { NoteboardPreview } from '@sunaissu/noteboard';
 import type { NoteboardElement } from '@sunaissu/noteboard';
 
 export function DashboardCard({ elements }: { elements: NoteboardElement[] }) {
-    return (
-        <div className="card">
-            <h3>My Board</h3>
-            {/* Renders a zoomed-to-fit static snapshot! */}
-            <NoteboardPreview 
-                elements={elements} 
-                height={120} 
-                style={{ borderRadius: '6px', border: '1px solid #ddd' }} 
-            />
-        </div>
-    );
+  return (
+    <div className="card">
+      <h3>My Board</h3>
+      <NoteboardPreview
+        elements={elements}
+        height={120}
+        style={{ borderRadius: '6px', border: '1px solid #ddd' }}
+      />
+    </div>
+  );
 }
 ```
 
+---
+
+## 📋 Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes across versions.
+
+---
+
 ## 📜 License
 
-MIT License. See `LICENSE` for details.
+MIT License. See [LICENSE](./LICENSE) for details.

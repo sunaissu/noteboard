@@ -10,7 +10,7 @@
  *   TextSection.tsx      — font size/family, alignment, line height, highlight
  *   PenSection.tsx       — highlighter mode, smoothing tension
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
     PaletteIcon, PaintBucketIcon, LineSegmentIcon, CircleHalfIcon,
     TextAaIcon, TextAlignLeftIcon, TextAlignCenterIcon, TextAlignRightIcon,
@@ -20,6 +20,7 @@ import type { NoteboardElement } from '../../elements/types';
 import { isShapeElement, isLinearElement, hasShapeText } from '../../elements/types';
 import type { PropertiesPosition } from '../../types';
 import { COLOR_SWATCHES_LIGHT, COLOR_SWATCHES_DARK, iconBtnStyle } from './primitives';
+import { CaretDownIcon } from '@phosphor-icons/react';
 
 import { PanelHeader } from './PanelHeader';
 import { AppearanceSection } from './AppearanceSection';
@@ -90,9 +91,10 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
     const showFill = hasShapes;
     const showStrokeWidth = hasShapes || hasLinear;
-    // Show text section for: standalone text, shapes with text, or text-capable shapes (all isShapeElement types, which already excludes frames)
-    const showTextProps = hasText || hasShapesWithText
-        || selectedElements.some((el) => isShapeElement(el));
+    // Show text section only for standalone text elements or shapes that actually
+    // contain text (i.e. the user has typed something into the shape).
+    // Do NOT show it for every shape element — that was flooding the panel.
+    const showTextProps = hasText || hasShapesWithText;
     const showLineProps = hasLines || hasArrows;
 
     const first = selectedElements[0];
@@ -112,6 +114,9 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         : (hasSelection ? 'scale(1)' : 'scale(0.97)');
 
     const ibs = (active = false) => iconBtnStyle(theme, active);
+
+    // ── Whole-panel collapse state ──────────────────────────────
+    const [panelCollapsed, setPanelCollapsed] = useState(false);
 
     // ── Compact horizontal layout (top / bottom) ──────────────────────────────
     if (isHorizontal) {
@@ -216,7 +221,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         );
     }
 
-    // ── Vertical layout (left / right) ────────────────────────────────────────
     return (
         <div onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
             style={{
@@ -227,10 +231,52 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 opacity: hasSelection ? 1 : 0,
                 transition: 'opacity 0.2s ease, transform 0.2s ease',
                 // Use 100% (canvas container) not 100vh (viewport) so panel never overflows the canvas
-                maxHeight: 'calc(100% - 24px)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                maxHeight: panelCollapsed ? 'none' : 'calc(100% - 24px)',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
             }}
         >
-            <PanelHeader
+            {/* Panel title bar with collapse toggle */}
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '6px 10px 4px',
+                borderBottom: panelCollapsed ? 'none' : theme.panelBorder,
+                flexShrink: 0,
+            }}>
+                <button
+                    onClick={() => setPanelCollapsed((v) => !v)}
+                    title={panelCollapsed ? 'Expand panel' : 'Collapse panel'}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        border: 'none', background: 'transparent', cursor: 'pointer',
+                        padding: '2px 0', borderRadius: 4,
+                    }}
+                >
+                    <CaretDownIcon
+                        size={11}
+                        weight="bold"
+                        style={{
+                            color: theme.panelMutedColor,
+                            transform: panelCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.18s ease',
+                            flexShrink: 0,
+                        }}
+                    />
+                    <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        color: theme.panelMutedColor,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        userSelect: 'none',
+                    }}>
+                        Properties
+                        <span style={{ fontWeight: 400, marginLeft: 4, opacity: 0.7 }}>({selectedElements.length})</span>
+                    </span>
+                </button>
+            </div>
+
+            {!panelCollapsed && (
+                <>
+                    <PanelHeader
                 count={selectedElements.length}
                 isLocked={isLocked}
                 isMultiSelect={isMultiSelect}
@@ -243,31 +289,33 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                 onUngroup={onUngroup}
             />
 
-            {/* Scrollable body */}
-            <div style={{
-                padding: '12px 14px 14px', overflowY: 'auto', flex: 1,
-                scrollbarWidth: 'thin', scrollbarColor: `${theme.panelMutedColor}44 transparent`,
-            }}>
-                <AppearanceSection
-                    selectedElements={selectedElements}
-                    isDark={isDark}
-                    onUpdate={onUpdateElements}
-                    onAlignLeft={onAlignLeft}
-                    onAlignCenterH={onAlignCenterH}
-                    onAlignRight={onAlignRight}
-                    onAlignTop={onAlignTop}
-                    onAlignCenterV={onAlignCenterV}
-                    onAlignBottom={onAlignBottom}
-                    onDistributeH={onDistributeH}
-                    onDistributeV={onDistributeV}
-                />
-                <ShadowSection selectedElements={selectedElements} onUpdate={onUpdateElements} />
-                {showLineProps && <LineSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-                {showTextProps && <TextSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-                {hasPen && <PenSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-                {hasFrames && <FrameSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-                {hasStars && <StarSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-            </div>
+                    {/* Scrollable body */}
+                    <div style={{
+                        padding: '12px 14px 14px', overflowY: 'auto', flex: 1,
+                        scrollbarWidth: 'thin', scrollbarColor: `${theme.panelMutedColor}44 transparent`,
+                    }}>
+                        <AppearanceSection
+                            selectedElements={selectedElements}
+                            isDark={isDark}
+                            onUpdate={onUpdateElements}
+                            onAlignLeft={onAlignLeft}
+                            onAlignCenterH={onAlignCenterH}
+                            onAlignRight={onAlignRight}
+                            onAlignTop={onAlignTop}
+                            onAlignCenterV={onAlignCenterV}
+                            onAlignBottom={onAlignBottom}
+                            onDistributeH={onDistributeH}
+                            onDistributeV={onDistributeV}
+                        />
+                        <ShadowSection selectedElements={selectedElements} onUpdate={onUpdateElements} />
+                        {showLineProps && <LineSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
+                        {showTextProps && <TextSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
+                        {hasPen && <PenSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
+                        {hasFrames && <FrameSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
+                        {hasStars && <StarSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
+                    </div>
+                </>
+            )}
         </div>
     );
 };

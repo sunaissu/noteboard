@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, StickyNoteElement } from '../../elements/types';
-import { SectionLabel, Divider } from './primitives';
+import { Divider, CollapsibleSection } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -24,8 +24,8 @@ export function StickyNoteSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Note Color</SectionLabel>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <CollapsibleSection label="Note Color" theme={theme}>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
                 {NOTE_COLORS.map((c) => (
                     <button
                         key={c.key}
@@ -41,7 +41,8 @@ export function StickyNoteSection({ selectedElements, onUpdate }: Props) {
                         }}
                     />
                 ))}
-            </div>
+                </div>
+            </CollapsibleSection>
         </>
     );
 }

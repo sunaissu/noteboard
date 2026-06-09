@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLineRightIcon, ArrowBendUpRightIcon, TagIcon } from '@phosphor-icons/react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, LineElement, ArrowElement } from '../../elements/types';
-import { SectionLabel, Divider, ChoiceRow } from './primitives';
+import { Divider, CollapsibleSection, ChoiceRow } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -38,7 +38,7 @@ export function LineSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Line / Arrow</SectionLabel>
+            <CollapsibleSection label="Line / Arrow" theme={theme}>
 
             <ChoiceRow
                 label="Routing"
@@ -112,6 +112,7 @@ export function LineSection({ selectedElements, onUpdate }: Props) {
                     </div>
                 )}
             </div>
+            </CollapsibleSection>
         </>
     );
 }

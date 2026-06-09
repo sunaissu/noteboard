@@ -146,6 +146,9 @@ export function useCanvasDrawing({
     const startPointRef = useRef<Point>({ x: 0, y: 0 });
     const dragLastRef = useRef<Point>({ x: 0, y: 0 });
     const selectionRectRef = useRef<{ start: Point; end: Point } | null>(null);
+    // Set to true by the canvas React onPointerUp; the global window fallback
+    // checks this to avoid double-processing the same event.
+    const pointerUpHandledRef = useRef(false);
 
     // History, clipboard, always-fresh elements ref
     const history = useHistory();
@@ -1028,6 +1031,7 @@ export function useCanvasDrawing({
     // ─── 8. POINTER UP ──────────────────────────────────────────
 
     const onPointerUp = useCallback(() => {
+        pointerUpHandledRef.current = true; // Tell window fallback this event was handled
         if (interactionModeRef.current === 'rotate') { interactionModeRef.current = 'none'; activeHandleRef.current = null; return; }
         if (interactionModeRef.current === 'resize') { interactionModeRef.current = 'none'; activeHandleRef.current = null; resizeStartBoundsRef.current = null; resizeStartElementsRef.current = []; return; }
         if (isErasingRef.current) { isErasingRef.current = false; return; }
@@ -1066,6 +1070,75 @@ export function useCanvasDrawing({
             setElements((prev) => { history.record(prev); return [...prev, finalEl]; });
         }
     }, [elements, repaint, history]);
+
+    // ─── Global pointer-up fallback ─────────────────────────────
+    // ONLY runs when the canvas React onPointerUp did NOT fire (pointer capture
+    // was lost and the release happened outside the canvas). For all normal
+    // within-canvas interactions the canvas handler sets pointerUpHandledRef=true
+    // and this listener is skipped, so it cannot interfere with dragging.
+    useEffect(() => {
+        const onWindowPointerUp = () => {
+            // Canvas already handled this event — skip
+            if (pointerUpHandledRef.current) {
+                pointerUpHandledRef.current = false;
+                return;
+            }
+            // Fallback: clean up any interaction that was interrupted (e.g. pointer capture lost)
+            if (interactionModeRef.current === 'rotate' || interactionModeRef.current === 'resize') {
+                interactionModeRef.current = 'none';
+                activeHandleRef.current = null;
+                resizeStartBoundsRef.current = null;
+                resizeStartElementsRef.current = [];
+                return;
+            }
+            if (isErasingRef.current) { isErasingRef.current = false; return; }
+            if (isDraggingRef.current) { isDraggingRef.current = false; return; }
+
+            // Commit marquee selection even when released outside the canvas
+            if (isSelectingRef.current) {
+                isSelectingRef.current = false;
+                const sr = selectionRectRef.current;
+                selectionRectRef.current = null;
+                if (sr) {
+                    const bounds: Bounds = [
+                        Math.min(sr.start.x, sr.end.x), Math.min(sr.start.y, sr.end.y),
+                        Math.max(sr.start.x, sr.end.x), Math.max(sr.start.y, sr.end.y),
+                    ];
+                    const selected = getElementsInBounds(elementsRef.current, bounds);
+                    setSelectedIds(expandSelectionToGroups(elementsRef.current, new Set(selected.map((el) => el.id))));
+                }
+                repaint();
+                return;
+            }
+
+            if (isPanningRef.current) { isPanningRef.current = false; return; }
+
+            // Finish any in-progress drawing
+            if (drawingRef.current) {
+                drawingRef.current = false;
+                const finishedElement = currentElementRef.current;
+                currentElementRef.current = null;
+                if (finishedElement) {
+                    let finalEl = { ...finishedElement };
+                    if (finalEl.width === 0 && finalEl.height === 0) {
+                        if (finalEl.type === 'rectangle' || finalEl.type === 'ellipse' || finalEl.type === 'diamond' || finalEl.type === 'star') {
+                            finalEl.width = 100; finalEl.height = 100;
+                        } else if (finalEl.type === 'text') {
+                            finalEl.width = 20; finalEl.height = 20;
+                        }
+                        if (finalEl.width !== 0) {
+                            finalEl.x = finalEl.x - finalEl.width / 2;
+                            finalEl.y = finalEl.y - finalEl.height / 2;
+                        }
+                    }
+                    setElements((prev) => { history.record(prev); return [...prev, finalEl]; });
+                }
+            }
+        };
+
+        window.addEventListener('pointerup', onWindowPointerUp);
+        return () => window.removeEventListener('pointerup', onWindowPointerUp);
+    }, [repaint, history, setElements]);
 
     // ─── 9. WHEEL (pan & zoom) ──────────────────────────────────
 
@@ -1199,7 +1272,13 @@ export function useCanvasDrawing({
     const onPointerLeave = useCallback(() => {
         const canvas = canvasRef.current;
         if (canvas) canvas.style.cursor = 'default';
-    }, []);
+        // Clear any stale marquee rectangle so it doesn't linger when pointer
+        // exits the canvas mid-drag (the global pointerup handler will commit it)
+        if (!isSelectingRef.current && selectionRectRef.current) {
+            selectionRectRef.current = null;
+            repaint();
+        }
+    }, [repaint]);
 
     return {
         canvasRef, elements, setElements,

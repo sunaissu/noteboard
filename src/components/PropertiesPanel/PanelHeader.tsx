@@ -28,25 +28,9 @@ export function PanelHeader({
     const ibs = (active = false) => iconBtnStyle(theme, active);
 
     return (
-        <div style={{ padding: '10px 14px 6px', borderBottom: theme.panelBorder, flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{
-                    fontSize: 11, fontWeight: 600, color: theme.panelMutedColor,
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                }}>
-                    Properties
-                    <span style={{ fontWeight: 400, marginLeft: 4, opacity: 0.7 }}>({count})</span>
-                </span>
-                <button onClick={onToggleLock} title={isLocked ? 'Unlock' : 'Lock'} style={ibs(isLocked)}>
-                    {isLocked
-                        ? <LockSimpleIcon size={14} weight="bold" />
-                        : <LockOpenIcon size={14} weight="regular" />
-                    }
-                </button>
-            </div>
-
-            {/* Z-order & group row */}
-            <div style={{ display: 'flex', gap: 2, marginTop: 8 }}>
+        <div style={{ padding: '6px 10px 6px', borderBottom: theme.panelBorder, flexShrink: 0 }}>
+            {/* Z-order, group, lock — all in one row */}
+            <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <button onClick={onBringToFront} title="Bring to Front" style={ibs()}><ArrowFatLineUpIcon size={14} /></button>
                 <button onClick={onBringForward} title="Bring Forward" style={ibs()}><ArrowFatUpIcon size={14} /></button>
                 <button onClick={onSendBackward} title="Send Backward" style={ibs()}><ArrowFatDownIcon size={14} /></button>
@@ -56,6 +40,12 @@ export function PanelHeader({
                     <button onClick={onGroup} title="Group (Ctrl+G)" style={ibs()}><FrameCornersIcon size={14} /></button>
                 )}
                 <button onClick={onUngroup} title="Ungroup (Ctrl+Shift+G)" style={ibs()}><MinusIcon size={14} /></button>
+                <button onClick={onToggleLock} title={isLocked ? 'Unlock' : 'Lock'} style={ibs(isLocked)}>
+                    {isLocked
+                        ? <LockSimpleIcon size={14} weight="bold" />
+                        : <LockOpenIcon size={14} weight="regular" />
+                    }
+                </button>
             </div>
         </div>
     );

@@ -158,6 +158,21 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         return () => observer.disconnect();
     }, []);
 
+    // Prevent browser zoom when cursor is inside the board
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        };
+
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, []);
+
     // Inject Google Fonts (Inter) — once
     useEffect(() => {
         const id = 'noteboard-google-fonts';

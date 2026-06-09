@@ -18,29 +18,27 @@ export function drawGrid(
     gridSize: number = GRID_SIZE,
 ): void {
     const step = gridSize * zoom;
-    if (step < 4) return; // too dense to see
+    if (step < 6) return; // too dense to see
 
-    // Compute the first grid line in screen space
+    // Compute first grid intersection in screen space
     const startX = ((panX % step) + step) % step;
     const startY = ((panY % step) + step) % step;
 
     ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([]);
+    ctx.fillStyle = color;
     ctx.globalAlpha = 1;
-    ctx.beginPath();
+
+    // Dot radius: larger dots at higher zoom so they remain visible
+    const r = Math.min(1.5, step * 0.05);
 
     for (let x = startX; x <= width; x += step) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-    }
-    for (let y = startY; y <= height; y += step) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
+        for (let y = startY; y <= height; y += step) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
-    ctx.stroke();
     ctx.restore();
 }
 

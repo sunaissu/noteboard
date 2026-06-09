@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { CaretDownIcon } from '@phosphor-icons/react';
 import type { NoteboardTheme } from '../../ThemeContext';
 
 export function SectionLabel({ children, theme }: { children: React.ReactNode; theme: NoteboardTheme }) {
@@ -12,6 +13,54 @@ export function SectionLabel({ children, theme }: { children: React.ReactNode; t
             marginBottom: 8,
         }}>
             {children}
+        </div>
+    );
+}
+
+export function CollapsibleSection({
+    label,
+    theme,
+    defaultOpen = true,
+    children,
+}: {
+    label: string;
+    theme: NoteboardTheme;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}) {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div>
+            <button
+                onClick={() => setOpen((v) => !v)}
+                style={{
+                    display: 'flex', alignItems: 'center', width: '100%',
+                    gap: 6, marginBottom: open ? 8 : 4,
+                    padding: '3px 0', border: 'none', background: 'transparent',
+                    cursor: 'pointer', borderRadius: 4,
+                }}
+            >
+                <CaretDownIcon
+                    size={11}
+                    weight="bold"
+                    style={{
+                        color: theme.panelMutedColor,
+                        transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+                        transition: 'transform 0.18s ease',
+                        flexShrink: 0,
+                    }}
+                />
+                <span style={{
+                    fontSize: 10, fontWeight: 600,
+                    color: theme.panelMutedColor,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    userSelect: 'none',
+                }}>
+                    {label}
+                </span>
+            </button>
+            {open && children}
         </div>
     );
 }

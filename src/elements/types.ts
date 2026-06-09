@@ -212,7 +212,9 @@ export type NoteboardElement =
     | PenElement
     | ImageElement
     | FrameElement
-    | StarElement;
+    | StarElement
+    | StickyNoteElement
+    | CalloutElement;
 
 // ─── Helper guards ───────────────────────────────────────────
 
@@ -224,9 +226,9 @@ export function isLinearElement(
 
 export function isShapeElement(
     el: NoteboardElement,
-): el is RectangleElement | EllipseElement | DiamondElement | TriangleElement | StarElement {
+): el is RectangleElement | EllipseElement | DiamondElement | TriangleElement | StarElement | StickyNoteElement | CalloutElement {
     return el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'diamond' || el.type === 'triangle'
-        || el.type === 'star';
+        || el.type === 'star' || el.type === 'sticky-note' || el.type === 'callout';
 }
 
 export function isTextElement(

@@ -1,6 +1,6 @@
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, FrameElement } from '../../elements/types';
-import { SectionLabel, Divider } from './primitives';
+import { Divider, CollapsibleSection } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -16,7 +16,7 @@ export function FrameSection({ selectedElements, onUpdate }: Props) {
     return (
         <>
             <Divider theme={theme} />
-            <SectionLabel theme={theme}>Frame</SectionLabel>
+            <CollapsibleSection label="Frame" theme={theme}>
 
             {/* Frame name */}
             <div style={{ marginBottom: 10 }}>
@@ -47,6 +47,7 @@ export function FrameSection({ selectedElements, onUpdate }: Props) {
                     Show label
                 </label>
             </div>
+            </CollapsibleSection>
         </>
     );
 }

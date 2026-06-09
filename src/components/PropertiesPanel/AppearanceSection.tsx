@@ -5,7 +5,7 @@ import {
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, RectangleElement, BlendMode } from '../../elements/types';
 import { isShapeElement, isLinearElement } from '../../elements/types';
-import { ColorRow, ChoiceRow, SliderRow, COLOR_SWATCHES_LIGHT, COLOR_SWATCHES_DARK, iconBtnStyle } from './primitives';
+import { ColorRow, ChoiceRow, SliderRow, CollapsibleSection, COLOR_SWATCHES_LIGHT, COLOR_SWATCHES_DARK, iconBtnStyle } from './primitives';
 
 interface Props {
     selectedElements: NoteboardElement[];
@@ -52,7 +52,7 @@ export function AppearanceSection({
     const ibs = (active = false) => ({ ...iconBtnStyle(theme, active), padding: '5px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 });
 
     return (
-        <>
+        <CollapsibleSection label="Appearance" theme={theme}>
             <ColorRow
                 label="Stroke"
                 icon={<PaletteIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />}
@@ -168,6 +168,6 @@ export function AppearanceSection({
                     )}
                 </div>
             )}
-        </>
+        </CollapsibleSection>
     );
 }

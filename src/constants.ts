@@ -41,8 +41,8 @@ export const ROTATION_SNAP_ANGLE = Math.PI / 12; // 15°
 
 export const GRID_SIZE = 20;
 export const SNAP_THRESHOLD = 6;
-export const GRID_COLOR_LIGHT = 'rgba(0,0,0,0.07)';
-export const GRID_COLOR_DARK  = 'rgba(255,255,255,0.06)';
+export const GRID_COLOR_LIGHT = 'rgba(0,0,0,0.15)';
+export const GRID_COLOR_DARK  = 'rgba(255,255,255,0.12)';
 
 // ─── Nudge ───────────────────────────────────────────────────
 
