@@ -1,6 +1,6 @@
 {
   "name": "@sunaissu/noteboard",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.",
   "keywords": [
     "react",

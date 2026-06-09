@@ -6,7 +6,21 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.1] — 2026-06-09
+
+### Added
+
+- **"View only" badge** — When `readOnly={true}`, a frosted-glass pill badge appears at the top-center of the canvas with an eye icon and "View only" label. The badge adapts to the current theme (dark/light), is non-interactive (`pointerEvents: none`), and sits above all canvas content.
+
+### Changed
+
+- **Read-only is now prop-only** — The Read-only toggle has been removed from the ☰ settings panel. `readOnly` is intended to be controlled by the host application, not toggled from inside the board. The "View only" badge above communicates the state to end users instead.
+
+---
+
+
 ## [1.2.0] — 2026-06-09
+
 
 ### Added
 

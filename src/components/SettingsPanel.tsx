@@ -7,10 +7,6 @@ export interface SettingsPanelProps {
     onToggleDark: () => void;
     showGrid: boolean;
     onToggleGrid: () => void;
-    /** Current read-only state */
-    isReadOnly: boolean;
-    /** Toggle read-only mode (no-op when the prop is externally controlled) */
-    onToggleReadOnly: () => void;
     /** Show the keyboard shortcut cheatsheet */
     onShowShortcuts?: () => void;
     /** When provided, a Save button appears in the panel */
@@ -26,8 +22,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     onToggleDark,
     showGrid,
     onToggleGrid,
-    isReadOnly,
-    onToggleReadOnly,
     onShowShortcuts,
     onSave,
     onExportImage,
@@ -218,29 +212,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
                             </button>
                         </div>
-
-                        {/* Read-only toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 16, lineHeight: 1 }}>{isReadOnly ? '🔒' : '✏️'}</span>
-                                <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>
-                                    Read-only
-                                </span>
-                            </div>
-
-                            <button
-                                onClick={onToggleReadOnly}
-                                role="switch"
-                                aria-checked={isReadOnly}
-                                style={{
-                                    position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
-                                    cursor: 'pointer', background: isReadOnly ? '#e03131' : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
-                                }}
-                            >
-                                <span style={{ position: 'absolute', top: 2, left: isReadOnly ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-                            </button>
-                        </div>
-
                         {/* Keyboard shortcuts */}
                         {onShowShortcuts && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

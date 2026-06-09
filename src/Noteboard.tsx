@@ -752,8 +752,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onExportJSON={handleExportJSON}
                     onImportJSON={isReadOnly ? undefined : triggerImportJSON}
                     onClearCanvas={isReadOnly ? undefined : handleClearCanvas}
-                    isReadOnly={isReadOnly}
-                    onToggleReadOnly={handleToggleReadOnly}
                     onShowShortcuts={handleShowShortcuts}
                 />
 
@@ -790,6 +788,37 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 />
 
                 <ShortcutModal open={shortcutOpen} onClose={handleCloseShortcuts} />
+
+                {isReadOnly && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '5px 12px',
+                        borderRadius: 20,
+                        background: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)',
+                        backdropFilter: 'blur(8px)',
+                        border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                        color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.55)',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        letterSpacing: '0.03em',
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                        zIndex: 900,
+                    }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        View only
+                    </div>
+                )}
 
                 {contextMenu && (() => {
                     const hasSelection = selectedIds.size > 0;
