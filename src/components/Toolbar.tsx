@@ -10,6 +10,10 @@ export interface ToolbarProps {
     activeTool?: Tool;
     onToolSelect?: (tool: Tool) => void;
     activeShape?: ShapeVariant;
+    onUndo?: () => void;
+    onRedo?: () => void;
+    canUndo?: boolean;
+    canRedo?: boolean;
 }
 
 const SHAPE_TOOL_IDS = new Set<string>(SHAPE_VARIANTS);
@@ -23,6 +27,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     activeTool,
     onToolSelect,
     activeShape = 'rectangle',
+    onUndo,
+    onRedo,
+    canUndo = false,
+    canRedo = false,
 }) => {
     const theme = useNoteboardTheme();
     const isVertical = position === 'left' || position === 'right';
@@ -44,6 +52,48 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     transition: 'background 0.3s ease, box-shadow 0.3s ease',
                 }}
             >
+                {/* Undo / Redo buttons */}
+                {(onUndo || onRedo) && (
+                    <>
+                        <button
+                            onClick={onUndo}
+                            disabled={!canUndo}
+                            title="Undo (Ctrl+Z)"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 36, height: 36, border: 'none', borderRadius: 8,
+                                cursor: canUndo ? 'pointer' : 'not-allowed',
+                                background: 'transparent',
+                                color: canUndo ? theme.buttonDefaultColor : theme.badgeColor,
+                                fontSize: 16, opacity: canUndo ? 1 : 0.4,
+                                transition: 'background 0.15s, opacity 0.15s',
+                            }}
+                            onMouseEnter={(e) => { if (canUndo) e.currentTarget.style.background = theme.buttonHoverBg; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            ↩
+                        </button>
+                        <button
+                            onClick={onRedo}
+                            disabled={!canRedo}
+                            title="Redo (Ctrl+Shift+Z)"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 36, height: 36, border: 'none', borderRadius: 8,
+                                cursor: canRedo ? 'pointer' : 'not-allowed',
+                                background: 'transparent',
+                                color: canRedo ? theme.buttonDefaultColor : theme.badgeColor,
+                                fontSize: 16, opacity: canRedo ? 1 : 0.4,
+                                transition: 'background 0.15s, opacity 0.15s',
+                            }}
+                            onMouseEnter={(e) => { if (canRedo) e.currentTarget.style.background = theme.buttonHoverBg; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            ↪
+                        </button>
+                        <div style={{ width: 1, height: 20, background: theme.panelBorder.replace('1px solid ', ''), margin: isVertical ? '4px 8px' : '8px 4px', alignSelf: 'center' }} />
+                    </>
+                )}
                 {sortedSlots.map((slot) => {
                     // For the rectangle slot, show active shape's icon
                     const isShapeSlot = SHAPE_TOOL_IDS.has(slot.toolId);

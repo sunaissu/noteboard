@@ -72,6 +72,8 @@ interface UseCanvasDrawingOptions {
      * Wire this to your WebSocket broadcast or DB auto-save.
      */
     onElementsChange?: (elements: NoteboardElement[]) => void;
+    /** Called after every pan or zoom. */
+    onViewportChange?: (viewport: NoteboardViewport) => void;
     /** Whether snap-to-grid is enabled (controlled externally). */
     snapEnabled?: boolean;
     /** Whether the grid overlay is visible. */
@@ -93,6 +95,7 @@ export interface TextEditState {
 export function useCanvasDrawing({
     activeTool, width, height, canvasBg, strokeColor, isDark,
     initialElements, initialViewport, externalElements, onElementsChange,
+    onViewportChange,
     snapEnabled = false, showGrid = false, onImageInsertRequest,
 }: UseCanvasDrawingOptions) {
 
@@ -117,6 +120,9 @@ export function useCanvasDrawing({
     const onElementsChangeRef = useRef(onElementsChange);
     onElementsChangeRef.current = onElementsChange;
 
+    const onViewportChangeRef = useRef(onViewportChange);
+    onViewportChangeRef.current = onViewportChange;
+
     const setElements = useCallback(
         (updater: NoteboardElement[] | ((prev: NoteboardElement[]) => NoteboardElement[])) => {
             setElementsRaw((prev) => {
@@ -133,6 +139,12 @@ export function useCanvasDrawing({
         initialViewport ? { x: initialViewport.panX, y: initialViewport.panY } : { x: 0, y: 0 },
     );
     const [zoom, setZoom] = useState(initialViewport?.zoom ?? 1);
+
+    // Fire onViewportChange whenever pan or zoom changes
+    useEffect(() => {
+        onViewportChangeRef.current?.({ panX: panOffset.x, panY: panOffset.y, zoom });
+    }, [panOffset, zoom]);
+
     const panStartRef = useRef<Point>({ x: 0, y: 0 });
     const panOffsetStartRef = useRef<Point>({ x: 0, y: 0 });
 
@@ -193,9 +205,50 @@ export function useCanvasDrawing({
             case 'text':   canvas.style.cursor = 'text'; break;
             case 'eraser': canvas.style.cursor = 'crosshair'; break;
             case 'select': canvas.style.cursor = 'default'; break;
+            case 'line':
+            case 'arrow':  canvas.style.cursor = 'cell'; break;
             default:       canvas.style.cursor = 'crosshair'; break;
         }
     }, [activeTool]);
+
+    // ── Connector snap helpers ────────────────────────────────────
+    // Returns anchor points for a shape (4 edges + 4 corners + center)
+    const SNAP_RADIUS = 20; // canvas-space pixels
+    const getShapeAnchors = useCallback((el: NoteboardElement): Array<{x: number; y: number}> => {
+        if (el.isDeleted || isLinearElement(el)) return [];
+        const x1 = Math.min(el.x, el.x + el.width);
+        const y1 = Math.min(el.y, el.y + el.height);
+        const x2 = Math.max(el.x, el.x + el.width);
+        const y2 = Math.max(el.y, el.y + el.height);
+        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+        return [
+            { x: cx, y: y1 }, // top
+            { x: cx, y: y2 }, // bottom
+            { x: x1, y: cy }, // left
+            { x: x2, y: cy }, // right
+            { x: x1, y: y1 }, // top-left
+            { x: x2, y: y1 }, // top-right
+            { x: x1, y: y2 }, // bottom-left
+            { x: x2, y: y2 }, // bottom-right
+            { x: cx, y: cy }, // center
+        ];
+    }, []);
+
+    const snapRef = useRef<{x: number; y: number} | null>(null); // current snapped anchor (for repaint)
+
+    const findSnapPoint = useCallback((cp: {x: number; y: number}, excludeId?: string): {x: number; y: number} | null => {
+        const radius = SNAP_RADIUS / zoom;
+        let best: {x: number; y: number} | null = null;
+        let bestDist = radius;
+        for (const el of elementsRef.current) {
+            if (el.id === excludeId) continue;
+            for (const anchor of getShapeAnchors(el)) {
+                const d = Math.hypot(cp.x - anchor.x, cp.y - anchor.y);
+                if (d < bestDist) { bestDist = d; best = anchor; }
+            }
+        }
+        return best;
+    }, [zoom, getShapeAnchors]);
 
     // ─── 3. REPAINT ─────────────────────────────────────────────
 
@@ -363,6 +416,21 @@ export function useCanvasDrawing({
             const sx = Math.min(sr.start.x, sr.end.x), sy = Math.min(sr.start.y, sr.end.y);
             const sw = Math.abs(sr.end.x - sr.start.x), sh = Math.abs(sr.end.y - sr.start.y);
             ctx.fillRect(sx, sy, sw, sh); ctx.strokeRect(sx, sy, sw, sh);
+            ctx.restore();
+        }
+
+        // ── Connector snap highlight ──
+        const snap = snapRef.current;
+        if (snap) {
+            ctx.save();
+            ctx.strokeStyle = '#7c5cff';
+            ctx.fillStyle = 'rgba(124,92,255,0.18)';
+            ctx.lineWidth = 1.5 / zoom;
+            const r = 6 / zoom;
+            ctx.beginPath();
+            ctx.arc(snap.x, snap.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
             ctx.restore();
         }
 
@@ -831,6 +899,8 @@ export function useCanvasDrawing({
                     canvas.style.cursor = isPanningRef.current ? 'grabbing' : 'grab';
                 } else if (activeTool === 'text') {
                     canvas.style.cursor = 'text';
+                } else if (activeTool === 'line' || activeTool === 'arrow') {
+                    canvas.style.cursor = 'cell';
                 } else {
                     canvas.style.cursor = 'crosshair';
                 }
@@ -1016,7 +1086,11 @@ export function useCanvasDrawing({
                 currentElementRef.current = { ...el, width: rawCp.x - start.x, height: rawCp.y - start.y };
             } else if (el.type === 'line' || el.type === 'arrow') {
                 const rawCp = snapEnabled ? snapToGrid(cp) : cp;
-                currentElementRef.current = { ...el, points: [{ x: 0, y: 0 }, { x: rawCp.x - start.x, y: rawCp.y - start.y }], width: rawCp.x - start.x, height: rawCp.y - start.y } as NoteboardElement;
+                // Connector snap: snap the free endpoint to nearby shape anchors
+                const snapped = findSnapPoint(rawCp, currentElementRef.current?.id);
+                snapRef.current = snapped;
+                const endPt = snapped ?? rawCp;
+                currentElementRef.current = { ...el, points: [{ x: 0, y: 0 }, { x: endPt.x - start.x, y: endPt.y - start.y }], width: endPt.x - start.x, height: endPt.y - start.y } as NoteboardElement;
             } else if (el.type === 'pen' && isLinearElement(el)) {
                 const newPoint: any = { x: cp.x - start.x, y: cp.y - start.y, pressure: e.pressure ?? 0.5 };
                 const allPts = [...el.points, newPoint];
@@ -1025,7 +1099,7 @@ export function useCanvasDrawing({
             }
             repaint();
         },
-        [activeTool, snapEnabled, zoom, repaint, panOffset, selectedIds, toCanvas, toScreen],
+        [activeTool, snapEnabled, zoom, repaint, panOffset, selectedIds, toCanvas, toScreen, findSnapPoint],
     );
 
     // ─── 8. POINTER UP ──────────────────────────────────────────
@@ -1051,6 +1125,7 @@ export function useCanvasDrawing({
         if (isPanningRef.current) { isPanningRef.current = false; return; }
         if (!drawingRef.current) return;
         drawingRef.current = false;
+        snapRef.current = null; // clear connector snap highlight
         const finishedElement = currentElementRef.current;
         currentElementRef.current = null;
         if (finishedElement) {

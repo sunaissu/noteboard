@@ -33,6 +33,11 @@ export interface NoteboardRef {
     /** Returns the live elements array at the time of the call */
     getElements(): NoteboardElement[];
     /**
+     * Imperatively replace the board elements. Useful for resetting the board
+     * or pushing a specific state from outside the component.
+     */
+    setElements(elements: NoteboardElement[]): void;
+    /**
      * Returns a DB-ready snapshot of the current board state.
      * Falls back to 'default-thread' / 'default-board' if those props were not supplied.
      */
@@ -55,6 +60,31 @@ export interface NoteboardProps {
     theme?: 'light' | 'dark' | NoteboardTheme;
     /** Default theme when uncontrolled (default: 'dark') */
     defaultTheme?: 'light' | 'dark';
+
+    // ── View / Edit mode ────────────────────────────────────────
+
+    /**
+     * Controlled read-only mode. When true the board is view-only:
+     * no drawing, editing, or element manipulation is possible,
+     * but pan and zoom still work.
+     * Omit this prop to let the component manage the state internally.
+     */
+    readOnly?: boolean;
+    /**
+     * Initial read-only value when the component is uncontrolled.
+     * Defaults to false (editable).
+     */
+    defaultReadOnly?: boolean;
+    /**
+     * Fires whenever the internal read-only toggle changes (uncontrolled mode).
+     * Receives the new value.
+     */
+    onReadOnlyChange?: (readOnly: boolean) => void;
+    /**
+     * Fires whenever the user pans or zooms.
+     * Use this to persist or broadcast the viewport externally.
+     */
+    onViewportChange?: (viewport: NoteboardViewport) => void;
 
     // ── Persistence & multiplayer ──────────────────────────────
 

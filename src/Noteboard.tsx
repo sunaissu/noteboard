@@ -4,6 +4,9 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { ShapePicker, SHAPE_KEYS } from './components/ShapePicker';
 import { ZoomHUD } from './components/ZoomHUD';
+import { ShortcutModal } from './components/ShortcutModal';
+import { ContextMenu } from './components/ContextMenu';
+import type { ContextMenuItem } from './components/ContextMenu';
 import { useToolbarShortcuts } from './hooks/useToolbarShortcuts';
 import { useCanvasDrawing } from './hooks/useCanvasDrawing';
 import {
@@ -16,6 +19,7 @@ import type { NoteboardTheme } from './ThemeContext';
 import type { NoteboardProps, NoteboardRef, Tool, ShapeVariant } from './types';
 import { serializeBoard } from './session';
 import { generateId, createImageElement } from './elements/createElement';
+import { duplicateElement } from './elements/mutateElement';
 import {
     DEFAULT_FONT_SIZE,
     DEFAULT_FONT_FAMILY,
@@ -44,6 +48,11 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         activeTool: controlledTool,
         theme: themeProp,
         defaultTheme = 'dark',
+        // ── View / Edit mode ──
+        readOnly: controlledReadOnly,
+        defaultReadOnly = false,
+        onReadOnlyChange,
+        onViewportChange,
         // ── Persistence & multiplayer ──
         initialElements,
         initialViewport,
@@ -56,6 +65,31 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     ref,
 ) => {
     const [internalTool, setInternalTool] = useState<Tool>('select');
+
+    // ─── Read-only / View mode ────────────────────────────
+    const isControlledReadOnly = controlledReadOnly !== undefined;
+    const [internalReadOnly, setInternalReadOnly] = useState(defaultReadOnly);
+    const isReadOnly = isControlledReadOnly ? controlledReadOnly! : internalReadOnly;
+
+    const handleToggleReadOnly = useCallback(() => {
+        if (!isControlledReadOnly) {
+            setInternalReadOnly((v) => {
+                const next = !v;
+                onReadOnlyChange?.(next);
+                return next;
+            });
+        }
+    }, [isControlledReadOnly, onReadOnlyChange]);
+
+    // ─── Shortcut modal & context menu state ────────────────────
+    const [shortcutOpen, setShortcutOpen] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
+
+    const handleShowShortcuts = useCallback(() => setShortcutOpen(true), []);
+    const handleCloseShortcuts = useCallback(() => setShortcutOpen(false), []);
+    const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
+
     const [activeShape, setActiveShape] = useState<ShapeVariant>('rectangle');
     const [snapEnabled, setSnapEnabled] = useState(false);
     const [showGrid, setShowGrid] = useState(false);
@@ -119,7 +153,18 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     useToolbarShortcuts(slots, handleToolSelect);
 
-    // ─── Shape keyboard shortcuts (R, O, D, T) + G for grid ─────
+    // ─── ? key → shortcut modal ──────────────────────────────
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (e.key === '?') setShortcutOpen((v) => !v);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
+    // ─── Shape keyboard shortcuts (R, O, D, T) + G for grid ─────────
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             // Skip if typing in an input
@@ -196,21 +241,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         );
     }
 
-    const {
-        canvasRef,
-        handlers,
-        textEdit,
-        commitText,
-        panOffset,
-        setPanOffset,
-        zoom,
-        setZoom,
-        elements,
-        setElements,
-        selectedIds,
-        history,
-        zoomIn, zoomOut, zoomReset, fitAll,
-    } = useCanvasDrawing({
+    const useCanvasDrawingResult = useCanvasDrawing({
         activeTool: currentTool,
         width: size.width,
         height: size.height,
@@ -223,11 +254,29 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         initialViewport,
         externalElements,
         onElementsChange,
+        onViewportChange,
         onImageInsertRequest: useCallback((x: number, y: number) => {
             imageInsertPosRef.current = { x, y };
             fileInputRef.current?.click();
         }, []),
     });
+
+    const {
+        canvasRef,
+        handlers,
+        textEdit,
+        commitText,
+        panOffset,
+        setPanOffset,
+        zoom,
+        setZoom,
+        elements,
+        setElements,
+        selectedIds,
+        setSelectedIds,
+        history,
+        zoomIn, zoomOut, zoomReset, fitAll,
+    } = useCanvasDrawingResult;
 
     const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -271,6 +320,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         getElements() {
             return elements;
         },
+        setElements(newElements) {
+            setElements(newElements);
+        },
         getSession() {
             return serializeBoard(
                 elements,
@@ -286,7 +338,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             if (!canvas) return '';
             return canvas.toDataURL(`image/${format}`);
         },
-    }), [elements, panOffset, zoom, threadId, boardId]);
+    }), [elements, setElements, panOffset, zoom, threadId, boardId]);
 
     const handleSave = useCallback(() => {
         if (!onSave) return;
@@ -527,12 +579,15 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             <div
                 ref={containerRef}
                 tabIndex={0}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 style={{
                     position: 'relative',
                     width: '100%',
                     height: '100%',
                     overflow: 'hidden',
-                    outline: 'none',
+                    outline: isFocused ? '2px solid #7c5cff' : 'none',
+                    outlineOffset: '-2px',
                     background: resolvedTheme.canvasBg,
                     transition: 'background 0.3s ease',
                 }}
@@ -546,14 +601,18 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                         width: '100%',
                         height: '100%',
                         pointerEvents: textEdit.active ? 'none' : 'auto',
+                        cursor: isReadOnly ? 'default' : undefined,
                     }}
-                    onPointerDown={handlers.onPointerDown}
-                    onPointerMove={handlers.onPointerMove}
-                    onPointerUp={handlers.onPointerUp}
-                    onPointerLeave={handlers.onPointerLeave}
+                    onPointerDown={isReadOnly ? undefined : handlers.onPointerDown}
+                    onPointerMove={isReadOnly ? undefined : handlers.onPointerMove}
+                    onPointerUp={isReadOnly ? undefined : handlers.onPointerUp}
+                    onPointerLeave={isReadOnly ? undefined : handlers.onPointerLeave}
                     onWheel={handlers.onWheel}
-                    onDoubleClick={handlers.onDoubleClick}
-                    onContextMenu={(e) => e.preventDefault()}
+                    onDoubleClick={isReadOnly ? undefined : handlers.onDoubleClick}
+                    onContextMenu={(e) => {
+                        e.preventDefault();
+                        if (!isReadOnly) setContextMenu({ x: e.clientX, y: e.clientY });
+                    }}
                 />
 
                 {textEdit.active && (() => {
@@ -657,20 +716,28 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
 
 
-                <Toolbar
-                    slots={slots}
-                    position={toolbarPosition}
-                    activeTool={currentTool}
-                    onToolSelect={handleToolSelect}
-                    activeShape={activeShape}
-                />
+                {!isReadOnly && (
+                    <Toolbar
+                        slots={slots}
+                        position={toolbarPosition}
+                        activeTool={currentTool}
+                        onToolSelect={handleToolSelect}
+                        activeShape={activeShape}
+                        onUndo={() => setElements((prev) => { const r = history.undo(prev); if (r) { return r; } return prev; })}
+                        onRedo={() => setElements((prev) => { const r = history.redo(prev); if (r) { return r; } return prev; })}
+                        canUndo={history.canUndo()}
+                        canRedo={history.canRedo()}
+                    />
+                )}
 
-                <ShapePicker
-                    activeShape={activeShape}
-                    activeTool={currentTool}
-                    onSelectShape={handleShapeSelect}
-                    toolbarPosition={toolbarPosition}
-                />
+                {!isReadOnly && (
+                    <ShapePicker
+                        activeShape={activeShape}
+                        activeTool={currentTool}
+                        onSelectShape={handleShapeSelect}
+                        toolbarPosition={toolbarPosition}
+                    />
+                )}
 
                 <SettingsPanel
                     isDark={isDark}
@@ -683,31 +750,36 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onSave={onSave ? handleSave : undefined}
                     onExportImage={handleExportImage}
                     onExportJSON={handleExportJSON}
-                    onImportJSON={triggerImportJSON}
-                    onClearCanvas={handleClearCanvas}
+                    onImportJSON={isReadOnly ? undefined : triggerImportJSON}
+                    onClearCanvas={isReadOnly ? undefined : handleClearCanvas}
+                    isReadOnly={isReadOnly}
+                    onToggleReadOnly={handleToggleReadOnly}
+                    onShowShortcuts={handleShowShortcuts}
                 />
 
-                <PropertiesPanel
-                    selectedElements={selectedElements}
-                    onUpdateElements={handleUpdateElements}
-                    onBringForward={handleBringForward}
-                    onSendBackward={handleSendBackward}
-                    onBringToFront={handleBringToFront}
-                    onSendToBack={handleSendToBack}
-                    onGroup={handleGroup}
-                    onUngroup={handleUngroup}
-                    onToggleLock={handleToggleLock}
-                    onAlignLeft={handleAlignLeft}
-                    onAlignCenterH={handleAlignCenterH}
-                    onAlignRight={handleAlignRight}
-                    onAlignTop={handleAlignTop}
-                    onAlignCenterV={handleAlignCenterV}
-                    onAlignBottom={handleAlignBottom}
-                    onDistributeH={handleDistributeH}
-                    onDistributeV={handleDistributeV}
-                    isDark={isDark}
-                    position={resolvedPropertiesPosition}
-                />
+                {!isReadOnly && (
+                    <PropertiesPanel
+                        selectedElements={selectedElements}
+                        onUpdateElements={handleUpdateElements}
+                        onBringForward={handleBringForward}
+                        onSendBackward={handleSendBackward}
+                        onBringToFront={handleBringToFront}
+                        onSendToBack={handleSendToBack}
+                        onGroup={handleGroup}
+                        onUngroup={handleUngroup}
+                        onToggleLock={handleToggleLock}
+                        onAlignLeft={handleAlignLeft}
+                        onAlignCenterH={handleAlignCenterH}
+                        onAlignRight={handleAlignRight}
+                        onAlignTop={handleAlignTop}
+                        onAlignCenterV={handleAlignCenterV}
+                        onAlignBottom={handleAlignBottom}
+                        onDistributeH={handleDistributeH}
+                        onDistributeV={handleDistributeV}
+                        isDark={isDark}
+                        position={resolvedPropertiesPosition}
+                    />
+                )}
 
                 <ZoomHUD
                     zoom={zoom}
@@ -716,6 +788,98 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onReset={zoomReset}
                     onFitAll={fitAll}
                 />
+
+                <ShortcutModal open={shortcutOpen} onClose={handleCloseShortcuts} />
+
+                {contextMenu && (() => {
+                    const hasSelection = selectedIds.size > 0;
+                    const items: ContextMenuItem[] = [
+                        {
+                            label: 'Copy',
+                            icon: '📋',
+                            disabled: !hasSelection,
+                            onClick: () => { /* clipboard is internal to hook; trigger keyboard copy */ document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true })); },
+                        },
+                        {
+                            label: 'Paste',
+                            icon: '📌',
+                            onClick: () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true, bubbles: true })); },
+                        },
+                        {
+                            label: 'Duplicate',
+                            icon: '⎘',
+                            disabled: !hasSelection,
+                            onClick: () => {
+                                const groupMap = new Map<string, string>();
+                                const dupes = elements.filter((el) => selectedIds.has(el.id) && !el.isDeleted).map((el) => {
+                                    const base = duplicateElement(el);
+                                    if (el.groupId) {
+                                        if (!groupMap.has(el.groupId)) groupMap.set(el.groupId, generateId());
+                                        return { ...base, groupId: groupMap.get(el.groupId) };
+                                    }
+                                    return base;
+                                });
+                                setElements((prev) => { history.record(prev); return [...prev, ...dupes]; });
+                            },
+                        },
+                        { separator: true },
+                        {
+                            label: 'Bring Forward',
+                            icon: '⇑',
+                            disabled: !hasSelection,
+                            onClick: handleBringForward,
+                        },
+                        {
+                            label: 'Send Backward',
+                            icon: '⇓',
+                            disabled: !hasSelection,
+                            onClick: handleSendBackward,
+                        },
+                        {
+                            label: 'Bring to Front',
+                            icon: '⏫',
+                            disabled: !hasSelection,
+                            onClick: handleBringToFront,
+                        },
+                        {
+                            label: 'Send to Back',
+                            icon: '⏬',
+                            disabled: !hasSelection,
+                            onClick: handleSendToBack,
+                        },
+                        { separator: true },
+                        {
+                            label: 'Select All',
+                            icon: '□',
+                            onClick: () => {
+                                const ids = new Set(elements.filter((el) => !el.isDeleted).map((el) => el.id));
+                                setSelectedIds(ids);
+                            },
+                        },
+                        {
+                            label: 'Delete',
+                            icon: '🗑️',
+                            danger: true,
+                            disabled: !hasSelection,
+                            onClick: () => {
+                                setElements((prev) => { history.record(prev); return prev.map((el) => selectedIds.has(el.id) ? { ...el, isDeleted: true } : el); });
+                                setSelectedIds(new Set());
+                            },
+                        },
+                    ];
+                    const containerRect = containerRef.current?.getBoundingClientRect();
+                    const localX = contextMenu.x - (containerRect?.left ?? 0);
+                    const localY = contextMenu.y - (containerRect?.top ?? 0);
+                    return (
+                        <ContextMenu
+                            x={localX}
+                            y={localY}
+                            items={items}
+                            onClose={handleCloseContextMenu}
+                        />
+                    );
+                })()}
+
                 <input
                     type="file"
                     ref={fileInputRef}

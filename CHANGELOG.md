@@ -6,7 +6,27 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.0] — 2026-06-09
+
+### Added
+
+- **Connector snapping** — While drawing a `line` or `arrow`, the free endpoint snaps to 9 anchor points on nearby shapes (4 edges, 4 corners, center) when within 20 canvas-space pixels. A purple ring highlights the active snap target; the highlight is cleared on pointer up.
+- **Undo / Redo toolbar buttons** — ↩ / ↪ buttons now appear as a leading group in the toolbar strip. They are dimmed (opacity 0.4) when no history is available and activate on click. Wired to the existing `useHistory` hook.
+- **Right-click context menu** — Right-clicking the canvas opens a styled context menu with: Copy, Paste, Duplicate, Bring Forward, Send Backward, Bring to Front, Send to Back, Select All, and Delete. Closes on outside click or `Escape`.
+- **Keyboard shortcut cheatsheet** — Press `?` at any time (or the `?` button in ☰ → Keyboard Shortcuts) to open a two-column modal listing all shortcuts by category. Closes on `Escape` or backdrop click.
+- **`onViewportChange` prop** — `NoteboardProps` now accepts `onViewportChange?: (viewport: NoteboardViewport) => void`. Fires via a `useEffect` whenever pan or zoom changes.
+- **`ref.setElements()`** — `NoteboardRef` gains `setElements(elements: NoteboardElement[]): void` for imperative board state replacement.
+- **Per-tool cursor shapes** — `line`/`arrow` tools now show a `cell` cursor (cross + plus, hinting connection intent); shape tools use `crosshair`; `text` uses `text`; `pan` uses `grab`/`grabbing`.
+- **Focus ring** — The canvas container shows a `2px solid #7c5cff` outline when it has keyboard focus, improving accessibility.
+
+### Changed
+
+- **Playground** — Zoom percentage is now displayed live via `onViewportChange`. A collapsible 🎨 Theme section exposes color pickers for canvas background, stroke color, and panel color with instant live preview.
+
+---
+
 ## [1.1.0] — 2026-05-18
+
 
 ### Added
 
