@@ -169,25 +169,27 @@ function App() {
 
 ## 🤝 Multiplayer & Collaboration
 
-Noteboard is server-agnostic. Pass `elements` directly from your server state and broadcast updates via `onElementsChange`:
+Noteboard is server-agnostic. For conflict-free concurrent editing, install Yjs and connect the optional adapter to any Yjs provider:
 
 ```tsx
+import * as Y from 'yjs';
 import { Noteboard } from '@sunaissu/noteboard';
-import { useWebSocket } from './your-websocket-hook';
+import { useYjsNoteboard } from '@sunaissu/noteboard/yjs';
+
+const document = new Y.Doc();
 
 export function MultiplayerBoard() {
-  const { elements, sendUpdate } = useWebSocket('wss://your-server.com/room');
-
+  const binding = useYjsNoteboard(document);
   return (
     <Noteboard
-      elements={elements}
-      onElementsChange={(newElements) => {
-        sendUpdate(newElements); // Broadcast local changes to the server
-      }}
+      elements={binding.elements}
+      onElementsChange={binding.onElementsChange}
     />
   );
 }
 ```
+
+Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values and z-order in a `Y.Array`, allowing concurrent changes to merge without coupling the package to authentication, persistence, or a particular transport.
 
 ---
 

@@ -29,6 +29,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./yjs": {
+      "types": "./dist/yjs.d.ts",
+      "import": "./dist/yjs.mjs",
+      "require": "./dist/yjs.js"
     }
   },
   "files": [
@@ -38,8 +43,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup src/index.tsx --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.tsx --format cjs,esm --dts --watch",
+    "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",
+    "dev": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --watch",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "npm run check && npm run build",
     "playground": "npm --prefix playground run dev",
@@ -53,12 +58,19 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yjs": "^13.6.31"
   },
   "peerDependencies": {
     "@phosphor-icons/react": ">=2",
     "react": ">=18",
-    "react-dom": ">=18"
+    "react-dom": ">=18",
+    "yjs": "^13.6.31"
+  },
+  "peerDependenciesMeta": {
+    "yjs": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18"

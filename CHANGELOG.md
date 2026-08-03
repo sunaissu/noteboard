@@ -12,12 +12,14 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 - **`ref.setViewport()`** — Host applications can now imperatively pan and zoom a board. Invalid coordinates fall back safely and zoom is clamped to the supported range.
 - **Package scripts for playground development** — `npm run playground` and `npm run playground:build` now work from the package root.
+- **Optional Yjs adapter** — `@sunaissu/noteboard/yjs` maps controlled board elements to conflict-free Yjs element maps and z-order.
 
 ### Changed
 
 - **Functional playground zoom presets** — The 50%, 100%, 150%, and 200% buttons now drive the public viewport API instead of acting as placeholders.
 - **Lean published package** — Build-tool transitive dependencies are no longer declared as runtime dependencies.
 - **React compatibility** — Package declarations and the playground are built against React 18 while retaining support for React 18 and newer.
+- **Controlled element initialization** — An initial `elements` prop now hydrates the board immediately instead of waiting for a later reference change.
 
 ---
 

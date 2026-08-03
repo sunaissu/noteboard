@@ -105,7 +105,9 @@ export function useCanvasDrawing({
     // ─── 1. STATE & REFS ────────────────────────────────────────
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const [elements, setElementsRaw] = useState<NoteboardElement[]>(() => initialElements ?? []);
+    const [elements, setElementsRaw] = useState<NoteboardElement[]>(
+        () => externalElements ?? initialElements ?? [],
+    );
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [textEdit, setTextEdit] = useState<TextEditState>({
         x: 0, y: 0, active: false, editingId: null, initialText: '',
