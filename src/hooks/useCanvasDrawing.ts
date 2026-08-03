@@ -27,7 +27,7 @@ import {
     DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_LINE_HEIGHT,
     SELECTION_COLOR, HIT_TEST_THRESHOLD, SELECTION_PAD,
     MARQUEE_FILL, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP,
-    HANDLE_SIZE, HANDLE_FILL, HANDLE_STROKE,
+    HANDLE_SIZE, HANDLE_FILL,
     ROTATION_SNAP_ANGLE, MULTI_SELECTION_OPACITY,
     GRID_COLOR_LIGHT, GRID_COLOR_DARK, NUDGE_STEP, NUDGE_STEP_LARGE,
 } from '../constants';
@@ -55,6 +55,8 @@ interface UseCanvasDrawingOptions {
     height: number;
     canvasBg?: string;
     strokeColor?: string;
+    primaryColor?: string;
+    primaryOverlay?: string;
     isDark?: boolean;
     onImageInsertRequest?: (x: number, y: number) => void;
     /** Seed elements on first mount (from DB load). Uncontrolled — ignored after mount. */
@@ -93,7 +95,8 @@ export interface TextEditState {
 // ═════════════════════════════════════════════════════════════
 
 export function useCanvasDrawing({
-    activeTool, width, height, canvasBg, strokeColor, isDark,
+    activeTool, width, height, canvasBg, strokeColor,
+    primaryColor = SELECTION_COLOR, primaryOverlay = MARQUEE_FILL, isDark,
     initialElements, initialViewport, externalElements, onElementsChange,
     onViewportChange,
     snapEnabled = false, showGrid = false, onImageInsertRequest,
@@ -299,7 +302,7 @@ export function useCanvasDrawing({
             const singleEl = selectedEls.length === 1 ? selectedEls[0] : null;
 
             ctx.save();
-            ctx.strokeStyle = SELECTION_COLOR;
+            ctx.strokeStyle = primaryColor;
             ctx.lineWidth = 0.5 / zoom;
             ctx.setLineDash([]);
 
@@ -382,15 +385,15 @@ export function useCanvasDrawing({
                         const nHandle = handles.find((h) => h.position === 'n');
                         if (nHandle) {
                             ctx.beginPath();
-                            ctx.strokeStyle = HANDLE_STROKE; ctx.lineWidth = 1 / zoom; ctx.setLineDash([]);
+                            ctx.strokeStyle = primaryColor; ctx.lineWidth = 1 / zoom; ctx.setLineDash([]);
                             ctx.moveTo(nHandle.x, nHandle.y); ctx.lineTo(handle.x, handle.y); ctx.stroke();
                         }
                         ctx.beginPath();
                         ctx.arc(handle.x, handle.y, hs / 2, 0, Math.PI * 2);
                         ctx.fillStyle = HANDLE_FILL; ctx.fill();
-                        ctx.strokeStyle = HANDLE_STROKE; ctx.lineWidth = 1.5 / zoom; ctx.setLineDash([]); ctx.stroke();
+                        ctx.strokeStyle = primaryColor; ctx.lineWidth = 1.5 / zoom; ctx.setLineDash([]); ctx.stroke();
                     } else {
-                        ctx.fillStyle = HANDLE_FILL; ctx.strokeStyle = HANDLE_STROKE;
+                        ctx.fillStyle = HANDLE_FILL; ctx.strokeStyle = primaryColor;
                         ctx.lineWidth = 1.5 / zoom; ctx.setLineDash([]);
                         if (isLineOrArrow) {
                             ctx.beginPath(); ctx.arc(handle.x, handle.y, hs / 2 + 1 / zoom, 0, Math.PI * 2);
@@ -411,7 +414,7 @@ export function useCanvasDrawing({
         const sr = selectionRectRef.current;
         if (sr) {
             ctx.save();
-            ctx.strokeStyle = SELECTION_COLOR; ctx.fillStyle = MARQUEE_FILL;
+            ctx.strokeStyle = primaryColor; ctx.fillStyle = primaryOverlay;
             ctx.lineWidth = 0.5 / zoom; ctx.setLineDash([]);
             const sx = Math.min(sr.start.x, sr.end.x), sy = Math.min(sr.start.y, sr.end.y);
             const sw = Math.abs(sr.end.x - sr.start.x), sh = Math.abs(sr.end.y - sr.start.y);
@@ -423,8 +426,8 @@ export function useCanvasDrawing({
         const snap = snapRef.current;
         if (snap) {
             ctx.save();
-            ctx.strokeStyle = '#7c5cff';
-            ctx.fillStyle = 'rgba(124,92,255,0.18)';
+            ctx.strokeStyle = primaryColor;
+            ctx.fillStyle = primaryOverlay;
             ctx.lineWidth = 1.5 / zoom;
             const r = 6 / zoom;
             ctx.beginPath();
@@ -435,7 +438,7 @@ export function useCanvasDrawing({
         }
 
         ctx.restore();
-    }, [elements, width, height, panOffset, selectedIds, zoom, textEdit, canvasBg, showGrid, isDark]);
+    }, [elements, width, height, panOffset, selectedIds, zoom, textEdit, canvasBg, showGrid, isDark, primaryColor, primaryOverlay]);
 
     useEffect(() => { repaint(); }, [repaint]);
 

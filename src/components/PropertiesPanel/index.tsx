@@ -277,7 +277,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             {!panelCollapsed && (
                 <>
                     <PanelHeader
-                count={selectedElements.length}
                 isLocked={isLocked}
                 isMultiSelect={isMultiSelect}
                 onToggleLock={onToggleLock}

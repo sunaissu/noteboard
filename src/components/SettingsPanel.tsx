@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNoteboardTheme } from '../ThemeContext';
-import { List, X, Moon, Sun, FloppyDisk, DownloadSimple, Trash, GridNine, Export, UploadSimple } from '@phosphor-icons/react';
+import type { NoteboardResolvedTheme, NoteboardThemeMode } from '../ThemeContext';
+import { List, X, Moon, Sun, Monitor, FloppyDisk, DownloadSimple, Trash, GridNine, Export, UploadSimple } from '@phosphor-icons/react';
 
 export interface SettingsPanelProps {
-    isDark: boolean;
-    onToggleDark: () => void;
+    themeMode: NoteboardThemeMode;
+    resolvedTheme: NoteboardResolvedTheme;
+    onThemeChange: (theme: NoteboardThemeMode) => void;
     showGrid: boolean;
     onToggleGrid: () => void;
     /** Show the keyboard shortcut cheatsheet */
@@ -18,8 +20,9 @@ export interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
-    isDark,
-    onToggleDark,
+    themeMode,
+    resolvedTheme,
+    onThemeChange,
     showGrid,
     onToggleGrid,
     onShowShortcuts,
@@ -30,6 +33,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     onClearCanvas,
 }) => {
     const theme = useNoteboardTheme();
+    const isDark = resolvedTheme === 'dark';
     const [open, setOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -165,30 +169,62 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             borderBottom: theme.panelBorder,
                         }}
                     >
-                        {/* Theme toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        {/* Theme mode */}
+                        <div style={{ display: 'grid', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {isDark ? (
+                                {themeMode === 'system' ? (
+                                    <Monitor size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
+                                ) : isDark ? (
                                     <Moon size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                 ) : (
                                     <Sun size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                 )}
                                 <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>
-                                    Dark Mode
+                                    Theme
                                 </span>
+                                {themeMode === 'system' && (
+                                    <span style={{ marginLeft: 'auto', color: theme.panelMutedColor, fontSize: 11 }}>
+                                        {isDark ? 'Dark now' : 'Light now'}
+                                    </span>
+                                )}
                             </div>
 
-                            <button
-                                onClick={onToggleDark}
-                                role="switch"
-                                aria-checked={isDark}
+                            <div
+                                role="group"
+                                aria-label="Theme"
                                 style={{
-                                    position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
-                                    cursor: 'pointer', background: isDark ? '#7c5cff' : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                                    padding: 2,
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 2,
+                                    border: theme.panelBorder,
+                                    borderRadius: 8,
+                                    background: theme.buttonHoverBg,
                                 }}
                             >
-                                <span style={{ position: 'absolute', top: 2, left: isDark ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-                            </button>
+                                {(['system', 'light', 'dark'] as NoteboardThemeMode[]).map((mode) => (
+                                    <button
+                                        key={mode}
+                                        type="button"
+                                        onClick={() => onThemeChange(mode)}
+                                        aria-pressed={themeMode === mode}
+                                        style={{
+                                            minHeight: 28,
+                                            padding: '0 6px',
+                                            border: 'none',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            color: themeMode === mode ? theme.buttonActiveColor : theme.panelMutedColor,
+                                            background: themeMode === mode ? theme.buttonActiveBg : 'transparent',
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            textTransform: 'capitalize',
+                                        }}
+                                    >
+                                        {mode === 'system' ? 'Auto' : mode}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Grid toggle */}
@@ -206,7 +242,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 aria-checked={showGrid}
                                 style={{
                                     position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
-                                    cursor: 'pointer', background: showGrid ? '#7c5cff' : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                                    cursor: 'pointer', background: showGrid ? (theme.primaryColor ?? theme.buttonActiveColor) : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
                                 }}
                             >
                                 <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
@@ -249,7 +285,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </div>
                                 <button
                                     onClick={() => { onSave(); setOpen(false); }}
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 12px', border: 'none', borderRadius: 7, cursor: 'pointer', background: '#7c5cff', color: '#fff', fontSize: 12, fontWeight: 600, transition: 'opacity 0.15s' }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 12px', border: 'none', borderRadius: 7, cursor: 'pointer', background: theme.primaryColor ?? theme.buttonActiveColor, color: theme.primaryTextColor ?? '#fff', fontSize: 12, fontWeight: 600, transition: 'opacity 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                                 >

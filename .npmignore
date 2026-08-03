@@ -1,6 +1,7 @@
 # Development and source files
 src/
 playground/
+node_modules/
 
 # Config files
 tsconfig.json
@@ -9,6 +10,9 @@ vite.config.ts
 .eslintrc*
 .prettierrc*
 .gitignore
+*.tgz
+*.log
+.env*
 
 # Tests and workflows
 tests/

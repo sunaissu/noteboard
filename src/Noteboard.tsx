@@ -14,8 +14,8 @@ import {
     distributeH, distributeV,
 } from './hooks/useAlign';
 import { DEFAULT_SLOTS } from './toolRegistry';
-import { ThemeContext, LIGHT_THEME, DARK_THEME } from './ThemeContext';
-import type { NoteboardTheme } from './ThemeContext';
+import { ThemeContext, LIGHT_THEME, DARK_THEME, applyNoteboardBrandColors, useResolvedNoteboardTheme } from './ThemeContext';
+import type { NoteboardThemeMode } from './ThemeContext';
 import type { NoteboardProps, NoteboardRef, Tool, ShapeVariant } from './types';
 import { serializeBoard } from './session';
 import { generateId, createImageElement } from './elements/createElement';
@@ -23,21 +23,12 @@ import { duplicateElement } from './elements/mutateElement';
 import {
     DEFAULT_FONT_SIZE,
     DEFAULT_FONT_FAMILY,
+    MIN_ZOOM,
+    MAX_ZOOM,
     SELECTION_COLOR,
  } from './constants';
 import { isShapeElement } from './elements/types';
 
-
-// ─── Resolve theme prop → NoteboardTheme ─────────────────────
-
-function resolveTheme(
-    theme: 'light' | 'dark' | NoteboardTheme | undefined,
-    fallback: 'light' | 'dark',
-): NoteboardTheme {
-    if (!theme) return fallback === 'dark' ? DARK_THEME : LIGHT_THEME;
-    if (typeof theme === 'string') return theme === 'dark' ? DARK_THEME : LIGHT_THEME;
-    return theme;
-}
 
 export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     {
@@ -47,11 +38,13 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         onToolSelect,
         activeTool: controlledTool,
         theme: themeProp,
-        defaultTheme = 'dark',
+        defaultTheme = 'system',
+        themeOverrides,
+        brandColors,
+        onThemeChange,
         // ── View / Edit mode ──
         readOnly: controlledReadOnly,
         defaultReadOnly = false,
-        onReadOnlyChange,
         onViewportChange,
         // ── Persistence & multiplayer ──
         initialElements,
@@ -67,19 +60,8 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const [internalTool, setInternalTool] = useState<Tool>('select');
 
     // ─── Read-only / View mode ────────────────────────────
-    const isControlledReadOnly = controlledReadOnly !== undefined;
-    const [internalReadOnly, setInternalReadOnly] = useState(defaultReadOnly);
-    const isReadOnly = isControlledReadOnly ? controlledReadOnly! : internalReadOnly;
-
-    const handleToggleReadOnly = useCallback(() => {
-        if (!isControlledReadOnly) {
-            setInternalReadOnly((v) => {
-                const next = !v;
-                onReadOnlyChange?.(next);
-                return next;
-            });
-        }
-    }, [isControlledReadOnly, onReadOnlyChange]);
+    const [internalReadOnly] = useState(defaultReadOnly);
+    const isReadOnly = controlledReadOnly ?? internalReadOnly;
 
     // ─── Shortcut modal & context menu state ────────────────────
     const [shortcutOpen, setShortcutOpen] = useState(false);
@@ -100,32 +82,28 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const [size, setSize] = useState({ width: 800, height: 600 });
 
     // ─── Theme state ─────────────────────────────────────────
-    const isControlledTheme = themeProp !== undefined;
-    const [internalDark, setInternalDark] = useState(defaultTheme === 'dark');
+    const isControlledThemeMode = typeof themeProp === 'string';
+    const legacyThemeOverrides = typeof themeProp === 'object' ? themeProp : undefined;
+    const [internalThemeMode, setInternalThemeMode] = useState<NoteboardThemeMode>(defaultTheme);
+    const themeMode = isControlledThemeMode ? themeProp : internalThemeMode;
+    const resolvedThemeMode = useResolvedNoteboardTheme(themeMode);
+    const isDark = resolvedThemeMode === 'dark';
 
     const resolvedTheme = useMemo(
-        () =>
-            isControlledTheme
-                ? resolveTheme(themeProp, 'light')
-                : internalDark
-                    ? DARK_THEME
-                    : LIGHT_THEME,
-        [isControlledTheme, themeProp, internalDark],
+        () => ({
+            ...applyNoteboardBrandColors(
+                { ...(isDark ? DARK_THEME : LIGHT_THEME), ...legacyThemeOverrides },
+                brandColors,
+            ),
+            ...themeOverrides,
+        }),
+        [brandColors, isDark, legacyThemeOverrides, themeOverrides],
     );
 
-    const isDark = useMemo(() => {
-        if (isControlledTheme) {
-            if (typeof themeProp === 'string') return themeProp === 'dark';
-            return themeProp?.canvasBg === DARK_THEME.canvasBg;
-        }
-        return internalDark;
-    }, [isControlledTheme, themeProp, internalDark]);
-
-    const handleToggleDark = useCallback(() => {
-        if (!isControlledTheme) {
-            setInternalDark((v) => !v);
-        }
-    }, [isControlledTheme]);
+    const handleThemeChange = useCallback((nextTheme: NoteboardThemeMode) => {
+        if (!isControlledThemeMode) setInternalThemeMode(nextTheme);
+        onThemeChange?.(nextTheme);
+    }, [isControlledThemeMode, onThemeChange]);
 
     const currentTool = controlledTool ?? internalTool;
 
@@ -247,6 +225,8 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         height: size.height,
         canvasBg: resolvedTheme.canvasBg,
         strokeColor: resolvedTheme.strokeColor,
+        primaryColor: resolvedTheme.primaryColor,
+        primaryOverlay: resolvedTheme.primaryOverlay,
         isDark,
         snapEnabled,
         showGrid,
@@ -323,6 +303,16 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         setElements(newElements) {
             setElements(newElements);
         },
+        setViewport(newViewport) {
+            const nextZoom = Number.isFinite(newViewport.zoom)
+                ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newViewport.zoom))
+                : 1;
+            setPanOffset({
+                x: Number.isFinite(newViewport.panX) ? newViewport.panX : 0,
+                y: Number.isFinite(newViewport.panY) ? newViewport.panY : 0,
+            });
+            setZoom(nextZoom);
+        },
         getSession() {
             return serializeBoard(
                 elements,
@@ -338,7 +328,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             if (!canvas) return '';
             return canvas.toDataURL(`image/${format}`);
         },
-    }), [elements, setElements, panOffset, zoom, threadId, boardId]);
+    }), [elements, setElements, setPanOffset, setZoom, panOffset, zoom, threadId, boardId]);
 
     const handleSave = useCallback(() => {
         if (!onSave) return;
@@ -578,6 +568,8 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         <ThemeContext.Provider value={resolvedTheme}>
             <div
                 ref={containerRef}
+                data-theme={resolvedThemeMode}
+                data-theme-mode={themeMode}
                 tabIndex={0}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
@@ -586,7 +578,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     width: '100%',
                     height: '100%',
                     overflow: 'hidden',
-                    outline: isFocused ? '2px solid #7c5cff' : 'none',
+                    outline: isFocused ? `2px solid ${resolvedTheme.primaryColor ?? resolvedTheme.buttonActiveColor}` : 'none',
                     outlineOffset: '-2px',
                     background: resolvedTheme.canvasBg,
                     transition: 'background 0.3s ease',
@@ -683,7 +675,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                                 fontWeight: elFontWeight,
                                 fontStyle: elFontStyle,
                                 textDecoration: elTextDecoration,
-                                border: `1px solid ${SELECTION_COLOR}`,
+                                border: `1px solid ${resolvedTheme.primaryColor ?? SELECTION_COLOR}`,
                                 borderRadius: 2,
                                 padding: '1px 2px',
                                 margin: 0,
@@ -695,7 +687,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                                 color: resolvedTheme.textInputColor,
                                 lineHeight: lhMultiplier,
                                 whiteSpace: 'pre',
-                                caretColor: SELECTION_COLOR,
+                                caretColor: resolvedTheme.primaryColor ?? SELECTION_COLOR,
                                 boxShadow: 'none',
                                 boxSizing: 'border-box',
                                 wordBreak: 'keep-all',
@@ -740,8 +732,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 )}
 
                 <SettingsPanel
-                    isDark={isDark}
-                    onToggleDark={handleToggleDark}
+                    themeMode={themeMode}
+                    resolvedTheme={resolvedThemeMode}
+                    onThemeChange={handleThemeChange}
                     showGrid={showGrid}
                     onToggleGrid={() => {
                         setShowGrid((v) => !v);

@@ -6,6 +6,21 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.3.0] — 2026-08-03
+
+### Added
+
+- **`ref.setViewport()`** — Host applications can now imperatively pan and zoom a board. Invalid coordinates fall back safely and zoom is clamped to the supported range.
+- **Package scripts for playground development** — `npm run playground` and `npm run playground:build` now work from the package root.
+
+### Changed
+
+- **Functional playground zoom presets** — The 50%, 100%, 150%, and 200% buttons now drive the public viewport API instead of acting as placeholders.
+- **Lean published package** — Build-tool transitive dependencies are no longer declared as runtime dependencies.
+- **React compatibility** — Package declarations and the playground are built against React 18 while retaining support for React 18 and newer.
+
+---
+
 ## [1.2.1] — 2026-06-09
 
 ### Added

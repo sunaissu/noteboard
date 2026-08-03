@@ -1,6 +1,6 @@
 import { Noteboard } from '@sunaissu/noteboard'
 import type { Tool, ToolSlot, NoteboardRef, NoteboardViewport } from '@sunaissu/noteboard'
-import type { NoteboardTheme } from '@sunaissu/noteboard'
+import type { NoteboardThemeMode } from '@sunaissu/noteboard'
 import { useState, useRef, useCallback } from 'react'
 
 const customSlots: ToolSlot[] = [
@@ -15,8 +15,6 @@ const customSlots: ToolSlot[] = [
     { position: 9, toolId: 'image' },
 ]
 
-const DEFAULT_THEME: Partial<NoteboardTheme> = {}
-
 function App() {
     const [activeTool, setActiveTool] = useState<Tool>('select')
     const [position, setPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom')
@@ -27,27 +25,9 @@ function App() {
 
     // Theme customisation
     const [themeOpen, setThemeOpen] = useState(false)
-    const [canvasBg, setCanvasBg] = useState('#1e1e1e')
-    const [strokeColor, setStrokeColor] = useState('#e0e0e0')
-    const [panelBg, setPanelBg] = useState('#2a2a2a')
-
-    const customTheme: NoteboardTheme = {
-        canvasBg,
-        strokeColor,
-        textColor: strokeColor,
-        toolbarBg: panelBg,
-        toolbarShadow: '0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
-        buttonActiveBg: '#0d47a1',
-        buttonActiveColor: '#90caf9',
-        buttonHoverBg: '#3a3a3a',
-        buttonDefaultColor: '#cccccc',
-        badgeColor: '#777777',
-        panelBg,
-        panelBorder: '1px solid rgba(255,255,255,0.08)',
-        panelTextColor: '#e0e0e0',
-        panelMutedColor: '#999999',
-        textInputColor: strokeColor,
-    }
+    const [themeMode, setThemeMode] = useState<NoteboardThemeMode>('system')
+    const [primaryColor, setPrimaryColor] = useState('#7c5cff')
+    const [secondaryColor, setSecondaryColor] = useState('#22a06b')
 
     const handleExportPNG = useCallback(() => {
         if (!noteboardRef.current) return
@@ -151,17 +131,24 @@ function App() {
                 {[50, 100, 150, 200].map((pct) => (
                     <button
                         key={pct}
-                        onClick={() => {
-                            // Use the viewport change to drive internal zoom via noteboardRef
-                            // We fire a synthetic setZoom by updating initialViewport isn't available,
-                            // but we can set elements as a no-op to poke the ref — actual zoom is
-                            // controlled via ZoomHUD. Show zoom presets as informational for now.
-                            // The canonical approach: expose setZoom via ref in a future version.
-                            // For now, just highlight the current zoom.
-                        }}
+                        onClick={() => noteboardRef.current?.setViewport({
+                            ...viewport,
+                            zoom: pct / 100,
+                        })}
                         style={btnStyle(zoomPct === pct, '#7c5cff')}
                     >
                         {pct}%
+                    </button>
+                ))}
+
+                <span style={{ marginLeft: 16 }}>Theme:</span>
+                {(['system', 'light', 'dark'] as NoteboardThemeMode[]).map((candidate) => (
+                    <button
+                        key={candidate}
+                        onClick={() => setThemeMode(candidate)}
+                        style={btnStyle(themeMode === candidate, '#7c5cff')}
+                    >
+                        {candidate === 'system' ? 'automatic' : candidate}
                     </button>
                 ))}
 
@@ -181,22 +168,18 @@ function App() {
                             display: 'flex', flexDirection: 'column', gap: 12, minWidth: 220,
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <label style={{ fontSize: 13, fontWeight: 500 }}>Canvas background</label>
-                                <input type="color" value={canvasBg} onChange={(e) => setCanvasBg(e.target.value)} style={{ width: 36, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
+                                <label style={{ fontSize: 13, fontWeight: 500 }}>Primary color</label>
+                                <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} style={{ width: 36, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <label style={{ fontSize: 13, fontWeight: 500 }}>Stroke / text color</label>
-                                <input type="color" value={strokeColor} onChange={(e) => setStrokeColor(e.target.value)} style={{ width: 36, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <label style={{ fontSize: 13, fontWeight: 500 }}>Panel / toolbar color</label>
-                                <input type="color" value={panelBg} onChange={(e) => setPanelBg(e.target.value)} style={{ width: 36, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
+                                <label style={{ fontSize: 13, fontWeight: 500 }}>Secondary color</label>
+                                <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} style={{ width: 36, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
                             </div>
                             <button
-                                onClick={() => { setCanvasBg('#1e1e1e'); setStrokeColor('#e0e0e0'); setPanelBg('#2a2a2a'); }}
+                                onClick={() => { setPrimaryColor('#7c5cff'); setSecondaryColor('#22a06b'); }}
                                 style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #ccc', cursor: 'pointer', fontSize: 12 }}
                             >
-                                Reset to dark defaults
+                                Reset brand colors
                             </button>
                         </div>
                     )}
@@ -221,14 +204,16 @@ function App() {
                     onToolSelect={setActiveTool}
                     propertiesPosition={propertiesPosition}
                     readOnly={readOnly}
-                    theme={customTheme}
+                    theme={themeMode}
+                    onThemeChange={setThemeMode}
+                    brandColors={{ primary: primaryColor, secondary: secondaryColor }}
                     onViewportChange={setViewport}
                 />
             </div>
 
             <p style={{ marginTop: 12, color: '#888', fontSize: 14 }}>
                 Press keys <kbd>1</kbd>–<kbd>{customSlots.length}</kbd> to switch tools.
-                Use the <strong>☰ menu</strong> in the top-right to toggle dark mode.
+                Use the <strong>☰ menu</strong> in the top-right to select automatic, light, or dark mode.
                 Press <kbd>?</kbd> for keyboard shortcuts.
                 Right-click on canvas for context menu.
             </p>

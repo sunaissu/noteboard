@@ -19,7 +19,7 @@
 - **Right-Click Context Menu** — Copy, Paste, Duplicate, Bring Forward / Send Backward, Bring to Front / Send to Back, Select All, and Delete — all accessible via right-click anywhere on the canvas.
 - **Keyboard Shortcut Cheatsheet** — Press `?` (or the `?` button in the ☰ menu) to open a modal listing every keyboard shortcut organized by category.
 - **Board Management** — Export as PNG/JPEG, import/export state as JSON, toggle grid visibility, and clear the canvas with a confirmation prompt.
-- **Dark Mode Support** — Default light/dark themes with full custom `NoteboardTheme` override support.
+- **Theme Support** — Automatic system detection, explicit light/dark modes, and semantic color overrides.
 - **Focus Ring** — The canvas shows a visible purple focus ring when it receives keyboard focus, aiding accessibility.
 - **Read-Only Mode** — Lock the board to view-only with a single prop or toggle.
 - **Multiplayer Ready** — Completely server-agnostic. Integrates with WebSockets or CRDTs via controlled `elements` + `onElementsChange` props.
@@ -56,7 +56,8 @@ export default function App() {
       <Noteboard
         elements={elements}
         onElementsChange={setElements}
-        defaultTheme="dark"
+        defaultTheme="system"
+        brandColors={{ primary: '#7c5cff', secondary: '#22a06b' }}
       />
     </div>
   );
@@ -69,8 +70,11 @@ export default function App() {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `theme` | `'light' \| 'dark' \| NoteboardTheme` | `'dark'` | Active theme. Pass a custom `NoteboardTheme` object to override individual colors. |
-| `defaultTheme` | `'light' \| 'dark'` | `'dark'` | Sets the initial theme before the user toggles. |
+| `theme` | `'system' \| 'light' \| 'dark' \| NoteboardTheme` | `undefined` | Controlled theme mode. A full `NoteboardTheme` object remains supported as a legacy override. |
+| `defaultTheme` | `'system' \| 'light' \| 'dark'` | `'system'` | Initial mode when `theme` is uncontrolled. |
+| `brandColors` | `{ primary?: string; secondary?: string }` | `undefined` | Adapts active tools, focus, selection, badges, and supporting accents to the host app while preserving every theme mode. |
+| `themeOverrides` | `Partial<NoteboardTheme>` | `undefined` | Change individual colors without disabling mode switching. |
+| `onThemeChange` | `(theme: NoteboardThemeMode) => void` | `undefined` | Fires when Automatic, Light, or Dark is selected in board settings. Use it with a controlled `theme`. |
 | `initialElements` | `NoteboardElement[]` | `[]` | Seed elements on first mount. Uncontrolled — ignored after mount. |
 | `initialViewport` | `NoteboardViewport` | `undefined` | Seed pan & zoom on first mount (e.g. from a saved `NoteboardSession`). |
 | `elements` | `NoteboardElement[]` | `undefined` | Fully controlled elements array. Use alongside `onElementsChange` for real-time collaboration. |
@@ -78,7 +82,7 @@ export default function App() {
 | `onViewportChange` | `(viewport: NoteboardViewport) => void` | `undefined` | Fires whenever the user pans or zooms. Use to persist or broadcast the viewport. |
 | `readOnly` | `boolean` | `undefined` | Controlled read-only mode — hides the toolbar, disables all editing interactions. |
 | `defaultReadOnly` | `boolean` | `false` | Initial read-only state (uncontrolled). |
-| `onReadOnlyChange` | `(readOnly: boolean) => void` | `undefined` | Fires when the user toggles read-only mode from the ☰ menu. |
+| `onReadOnlyChange` | `(readOnly: boolean) => void` | `undefined` | Deprecated compatibility prop. Control `readOnly` from the host application. |
 | `toolbarPosition` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'bottom'` | Position of the main toolbar. |
 | `propertiesPosition` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'left'` | Position of the properties panel. |
 | `slots` | `ToolSlot[]` | `DEFAULT_SLOTS` | Customize which tools appear in the toolbar and their order. |
@@ -120,8 +124,23 @@ function App() {
 |---|---|---|
 | `getElements()` | `() => NoteboardElement[]` | Returns the current live elements array. |
 | `setElements()` | `(elements: NoteboardElement[]) => void` | Imperatively replaces the board elements. |
+| `setViewport()` | `(viewport: NoteboardViewport) => void` | Imperatively pans and zooms the board. Zoom is clamped to the supported range. |
 | `getSession()` | `() => NoteboardSession` | Returns a full DB-ready board snapshot. |
 | `exportImage()` | `(format?: 'png' \| 'jpeg') => string` | Returns the canvas as a data URL. |
+
+---
+
+## 🧪 Playground
+
+The Vite playground imports Noteboard directly from `src` and exercises toolbar placement, themes, read-only mode, viewport presets, and export APIs:
+
+```bash
+npm install
+npm --prefix playground install
+npm run playground
+```
+
+Use `npm run playground:build` for a production playground build.
 
 ---
 

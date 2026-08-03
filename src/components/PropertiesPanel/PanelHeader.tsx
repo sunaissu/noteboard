@@ -7,7 +7,6 @@ import { useNoteboardTheme } from '../../ThemeContext';
 import { iconBtnStyle } from './primitives';
 
 interface Props {
-    count: number;
     isLocked: boolean;
     isMultiSelect: boolean;
     onToggleLock?: () => void;
@@ -20,7 +19,7 @@ interface Props {
 }
 
 export function PanelHeader({
-    count, isLocked, isMultiSelect,
+    isLocked, isMultiSelect,
     onToggleLock, onBringToFront, onBringForward,
     onSendBackward, onSendToBack, onGroup, onUngroup,
 }: Props) {

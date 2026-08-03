@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { NoteboardTheme } from './ThemeContext';
+import type { NoteboardBrandColors, NoteboardTheme, NoteboardThemeMode } from './ThemeContext';
 import type { NoteboardElement } from './elements/types';
 import type { NoteboardSession, NoteboardViewport } from './session';
 
@@ -38,6 +38,11 @@ export interface NoteboardRef {
      */
     setElements(elements: NoteboardElement[]): void;
     /**
+     * Imperatively pan and zoom the board. Values are clamped to the same
+     * zoom range used by pointer and HUD controls.
+     */
+    setViewport(viewport: NoteboardViewport): void;
+    /**
      * Returns a DB-ready snapshot of the current board state.
      * Falls back to 'default-thread' / 'default-board' if those props were not supplied.
      */
@@ -56,10 +61,16 @@ export interface NoteboardProps {
     propertiesPosition?: PropertiesPosition;
     onToolSelect?: (tool: Tool) => void;
     activeTool?: Tool;
-    /** Pass 'light', 'dark', or a custom NoteboardTheme object */
-    theme?: 'light' | 'dark' | NoteboardTheme;
-    /** Default theme when uncontrolled (default: 'dark') */
-    defaultTheme?: 'light' | 'dark';
+    /** Controlled theme mode, or a legacy custom token object used as overrides. */
+    theme?: NoteboardThemeMode | NoteboardTheme;
+    /** Default theme when uncontrolled (default: 'system') */
+    defaultTheme?: NoteboardThemeMode;
+    /** Override individual colors while preserving light/dark/system switching. */
+    themeOverrides?: Partial<NoteboardTheme>;
+    /** Primary drives active tools/focus; secondary drives badges and supporting accents. */
+    brandColors?: NoteboardBrandColors;
+    /** Fires when a theme mode is selected in the board settings. */
+    onThemeChange?: (theme: NoteboardThemeMode) => void;
 
     // ── View / Edit mode ────────────────────────────────────────
 
@@ -76,8 +87,8 @@ export interface NoteboardProps {
      */
     defaultReadOnly?: boolean;
     /**
-     * Fires whenever the internal read-only toggle changes (uncontrolled mode).
-     * Receives the new value.
+     * @deprecated Noteboard no longer owns a read-only toggle. Control the
+     * `readOnly` prop in the host application instead.
      */
     onReadOnlyChange?: (readOnly: boolean) => void;
     /**
