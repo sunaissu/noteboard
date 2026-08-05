@@ -12,7 +12,9 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 - **`ref.setViewport()`** — Host applications can now imperatively pan and zoom a board. Invalid coordinates fall back safely and zoom is clamped to the supported range.
 - **Package scripts for playground development** — `npm run playground` and `npm run playground:build` now work from the package root.
-- **Optional Yjs adapter** — `@sunaissu/noteboard/yjs` maps controlled board elements to conflict-free Yjs element maps and z-order.
+- **Optional Yjs adapter** — `@sunaissu/noteboard/yjs` maps controlled board elements, z-order, and viewport state to conflict-free Yjs collections.
+- **Controlled viewport** — `viewport` can now be driven alongside `onViewportChange`, including through the Yjs adapter for synchronized pan and zoom.
+- **Viewport validation** — Controlled and collaborative viewport values are finite and zoom is clamped before reaching the renderer.
 
 ### Changed
 

@@ -47,6 +47,14 @@ function isTextElement(el: NoteboardElement): el is TextElement {
     return el.type === 'text';
 }
 
+const normalizeViewport = (viewport?: NoteboardViewport): NoteboardViewport => ({
+    panX: Number.isFinite(viewport?.panX) ? viewport!.panX : 0,
+    panY: Number.isFinite(viewport?.panY) ? viewport!.panY : 0,
+    zoom: Number.isFinite(viewport?.zoom)
+        ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, viewport!.zoom))
+        : 1,
+});
+
 // ─── Public interfaces ────────────────────────────────────────
 
 interface UseCanvasDrawingOptions {
@@ -63,6 +71,8 @@ interface UseCanvasDrawingOptions {
     initialElements?: NoteboardElement[];
     /** Seed viewport on first mount (from a saved NoteboardSession). */
     initialViewport?: NoteboardViewport;
+    /** Fully controlled viewport for external persistence or collaboration. */
+    externalViewport?: NoteboardViewport;
     /**
      * Fully controlled elements.
      * When this array reference changes the internal state is replaced.
@@ -97,7 +107,7 @@ export interface TextEditState {
 export function useCanvasDrawing({
     activeTool, width, height, canvasBg, strokeColor,
     primaryColor = SELECTION_COLOR, primaryOverlay = MARQUEE_FILL, isDark,
-    initialElements, initialViewport, externalElements, onElementsChange,
+    initialElements, initialViewport, externalElements, externalViewport, onElementsChange,
     onViewportChange,
     snapEnabled = false, showGrid = false, onImageInsertRequest,
 }: UseCanvasDrawingOptions) {
@@ -140,10 +150,26 @@ export function useCanvasDrawing({
     );
 
     // Pan & zoom
-    const [panOffset, setPanOffset] = useState<Point>(
-        initialViewport ? { x: initialViewport.panX, y: initialViewport.panY } : { x: 0, y: 0 },
+    const [panOffset, setPanOffset] = useState<Point>(() => {
+        const viewport = normalizeViewport(externalViewport ?? initialViewport);
+        return { x: viewport.panX, y: viewport.panY };
+    });
+    const [zoom, setZoom] = useState(
+        () => normalizeViewport(externalViewport ?? initialViewport).zoom,
     );
-    const [zoom, setZoom] = useState(initialViewport?.zoom ?? 1);
+
+    const externalViewportRef = useRef(externalViewport);
+    useEffect(() => {
+        if (!externalViewport || externalViewport === externalViewportRef.current) return;
+        externalViewportRef.current = externalViewport;
+        const viewport = normalizeViewport(externalViewport);
+        setPanOffset((current) =>
+            current.x === viewport.panX && current.y === viewport.panY
+                ? current
+                : { x: viewport.panX, y: viewport.panY },
+        );
+        setZoom((current) => current === viewport.zoom ? current : viewport.zoom);
+    }, [externalViewport]);
 
     // Fire onViewportChange whenever pan or zoom changes
     useEffect(() => {

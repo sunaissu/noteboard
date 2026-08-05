@@ -49,6 +49,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         // ── Persistence & multiplayer ──
         initialElements,
         initialViewport,
+        viewport: externalViewport,
         elements: externalElements,
         onElementsChange,
         onSave,
@@ -232,6 +233,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         showGrid,
         initialElements,
         initialViewport,
+        externalViewport,
         externalElements,
         onElementsChange,
         onViewportChange,

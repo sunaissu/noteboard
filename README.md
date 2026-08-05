@@ -77,6 +77,7 @@ export default function App() {
 | `onThemeChange` | `(theme: NoteboardThemeMode) => void` | `undefined` | Fires when Automatic, Light, or Dark is selected in board settings. Use it with a controlled `theme`. |
 | `initialElements` | `NoteboardElement[]` | `[]` | Seed elements on first mount. Uncontrolled — ignored after mount. |
 | `initialViewport` | `NoteboardViewport` | `undefined` | Seed pan & zoom on first mount (e.g. from a saved `NoteboardSession`). |
+| `viewport` | `NoteboardViewport` | `undefined` | Fully controlled pan and zoom state. Use with `onViewportChange` for persistence or collaboration. |
 | `elements` | `NoteboardElement[]` | `undefined` | Fully controlled elements array. Use alongside `onElementsChange` for real-time collaboration. |
 | `onElementsChange` | `(elements: NoteboardElement[]) => void` | `undefined` | Fires after every local draw, edit, move, or delete. |
 | `onViewportChange` | `(viewport: NoteboardViewport) => void` | `undefined` | Fires whenever the user pans or zooms. Use to persist or broadcast the viewport. |
@@ -184,12 +185,14 @@ export function MultiplayerBoard() {
     <Noteboard
       elements={binding.elements}
       onElementsChange={binding.onElementsChange}
+      viewport={binding.viewport}
+      onViewportChange={binding.onViewportChange}
     />
   );
 }
 ```
 
-Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values and z-order in a `Y.Array`, allowing concurrent changes to merge without coupling the package to authentication, persistence, or a particular transport.
+Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values, z-order in a `Y.Array`, and the viewport in a dedicated `Y.Map`, allowing concurrent changes to merge without coupling the package to authentication, persistence, or a particular transport.
 
 ---
 

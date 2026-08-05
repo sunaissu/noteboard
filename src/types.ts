@@ -109,6 +109,11 @@ export interface NoteboardProps {
      */
     initialViewport?: NoteboardViewport;
     /**
+     * Fully controlled viewport. Use with `onViewportChange` to synchronize
+     * pan and zoom through an external store or collaboration provider.
+     */
+    viewport?: NoteboardViewport;
+    /**
      * Fully controlled elements. When this prop changes the board updates to match.
      * Use this to push remote changes from a WebSocket or other sync source.
      */

@@ -1,19 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Y from 'yjs';
 import type { NoteboardElement } from './elements/types';
+import type { NoteboardViewport } from './session';
+import { MAX_ZOOM, MIN_ZOOM } from './constants';
 
 export const YJS_NOTEBOARD_ELEMENTS_KEY = 'noteboard-elements';
 export const YJS_NOTEBOARD_ORDER_KEY = 'noteboard-order';
+export const YJS_NOTEBOARD_VIEWPORT_KEY = 'noteboard-viewport';
 
 export interface YjsNoteboardOptions {
     elementsKey?: string;
     orderKey?: string;
     initialElements?: NoteboardElement[];
+    initialViewport?: NoteboardViewport;
+    viewportKey?: string;
 }
 
 export interface YjsNoteboardBinding {
     elements: NoteboardElement[];
     onElementsChange: (elements: NoteboardElement[]) => void;
+    onViewportChange: (viewport: NoteboardViewport) => void;
+    viewport: NoteboardViewport;
 }
 
 const valuesEqual = (left: unknown, right: unknown) =>
@@ -62,14 +69,29 @@ export function useYjsNoteboard(
 ): YjsNoteboardBinding {
     const elementsKey = options.elementsKey ?? YJS_NOTEBOARD_ELEMENTS_KEY;
     const orderKey = options.orderKey ?? YJS_NOTEBOARD_ORDER_KEY;
+    const viewportKey = options.viewportKey ?? YJS_NOTEBOARD_VIEWPORT_KEY;
     const stores = useMemo(() => ({
         elements: document.getMap<Y.Map<unknown>>(elementsKey),
         order: document.getArray<string>(orderKey),
-    }), [document, elementsKey, orderKey]);
+        viewport: document.getMap<number>(viewportKey),
+    }), [document, elementsKey, orderKey, viewportKey]);
     const localOrigin = useMemo(() => ({ source: 'noteboard' }), [document]);
     const [elements, setElements] = useState<NoteboardElement[]>(() =>
         readElements(stores.elements, stores.order),
     );
+    const readViewport = useCallback((): NoteboardViewport => {
+        const panX = stores.viewport.get('panX');
+        const panY = stores.viewport.get('panY');
+        const zoom = stores.viewport.get('zoom');
+        return {
+            panX: Number.isFinite(panX) ? panX! : 0,
+            panY: Number.isFinite(panY) ? panY! : 0,
+            zoom: Number.isFinite(zoom)
+                ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom!))
+                : 1,
+        };
+    }, [stores.viewport]);
+    const [viewport, setViewport] = useState<NoteboardViewport>(readViewport);
 
     useEffect(() => {
         const refresh = () => setElements(readElements(stores.elements, stores.order));
@@ -96,6 +118,23 @@ export function useYjsNoteboard(
         };
     }, [document, localOrigin, options.initialElements, stores]);
 
+    useEffect(() => {
+        const refresh = () => setViewport(readViewport());
+        stores.viewport.observe(refresh);
+
+        if (stores.viewport.size === 0 && options.initialViewport) {
+            document.transact(() => {
+                stores.viewport.set('panX', options.initialViewport!.panX);
+                stores.viewport.set('panY', options.initialViewport!.panY);
+                stores.viewport.set('zoom', options.initialViewport!.zoom);
+            }, localOrigin);
+        } else {
+            refresh();
+        }
+
+        return () => stores.viewport.unobserve(refresh);
+    }, [document, localOrigin, options.initialViewport, readViewport, stores.viewport]);
+
     const onElementsChange = useCallback((nextElements: NoteboardElement[]) => {
         document.transact(() => {
             const nextIds = new Set(nextElements.map((element) => element.id));
@@ -121,5 +160,26 @@ export function useYjsNoteboard(
         }, localOrigin);
     }, [document, localOrigin, stores]);
 
-    return { elements, onElementsChange };
+    const onViewportChange = useCallback((nextViewport: NoteboardViewport) => {
+        const normalizedViewport = {
+            panX: Number.isFinite(nextViewport.panX) ? nextViewport.panX : 0,
+            panY: Number.isFinite(nextViewport.panY) ? nextViewport.panY : 0,
+            zoom: Number.isFinite(nextViewport.zoom)
+                ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextViewport.zoom))
+                : 1,
+        };
+        document.transact(() => {
+            if (stores.viewport.get('panX') !== normalizedViewport.panX) {
+                stores.viewport.set('panX', normalizedViewport.panX);
+            }
+            if (stores.viewport.get('panY') !== normalizedViewport.panY) {
+                stores.viewport.set('panY', normalizedViewport.panY);
+            }
+            if (stores.viewport.get('zoom') !== normalizedViewport.zoom) {
+                stores.viewport.set('zoom', normalizedViewport.zoom);
+            }
+        }, localOrigin);
+    }, [document, localOrigin, stores.viewport]);
+
+    return { elements, onElementsChange, onViewportChange, viewport };
 }
