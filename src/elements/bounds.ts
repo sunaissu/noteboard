@@ -1,5 +1,6 @@
 import type { Bounds, Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
+import { getCalloutGeometry } from './calloutGeometry';
 
 // ─── Point-set Bounds ────────────────────────────────────────
 
@@ -88,6 +89,20 @@ export function getElementBounds(element: NoteboardElement): Bounds {
         return angle !== 0
             ? getRotatedBounds(rawBounds, angle, cx, cy)
             : rawBounds;
+    }
+
+    if (element.type === 'callout') {
+        const { body, tail } = getCalloutGeometry(element);
+        const points: Point[] = [
+            { x: body.x, y: body.y },
+            { x: body.x + body.width, y: body.y },
+            { x: body.x + body.width, y: body.y + body.height },
+            { x: body.x, y: body.y + body.height },
+            ...tail,
+        ];
+        return getPointsBounds(angle === 0
+            ? points
+            : points.map((point) => rotatePoint(point.x, point.y, cx, cy, angle)));
     }
 
     // Rectangle, text, etc.

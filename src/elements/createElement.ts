@@ -120,6 +120,8 @@ export function createLineElement(
         type: 'line',
         points: overrides.points ?? [],
         curveType: overrides.curveType ?? 'straight',
+        startBinding: overrides.startBinding ?? null,
+        endBinding: overrides.endBinding ?? null,
     } as LineElement;
 }
 
@@ -133,6 +135,8 @@ export function createArrowElement(
         startArrowhead: overrides.startArrowhead ?? null,
         endArrowhead: overrides.endArrowhead ?? 'arrow',
         curveType: overrides.curveType ?? 'straight',
+        startBinding: overrides.startBinding ?? null,
+        endBinding: overrides.endBinding ?? null,
     } as ArrowElement;
 }
 
@@ -201,6 +205,7 @@ export function createStickyNoteElement(
     } as StickyNoteElement;
 }
 
+/** @deprecated Frames are retained only for legacy serialized-board compatibility. */
 export function createFrameElement(
     overrides: Partial<FrameElement> = {},
 ): FrameElement {
@@ -274,10 +279,14 @@ export function createElement(
             return createPenElement(overrides as Partial<PenElement>);
         case 'image':
             return createImageElement(overrides as Partial<ImageElement>);
+        case 'sticky-note':
+            return createStickyNoteElement(overrides as Partial<StickyNoteElement>);
         case 'frame':
             return createFrameElement(overrides as Partial<FrameElement>);
         case 'star':
             return createStarElement(overrides as Partial<StarElement>);
+        case 'callout':
+            return createCalloutElement(overrides as Partial<CalloutElement>);
         default:
             throw new Error(`Unknown element type: ${type}`);
     }

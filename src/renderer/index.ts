@@ -1,9 +1,19 @@
-import type { NoteboardElement, ImageElement, RectangleElement, LineElement, ArrowElement, FrameElement, StarElement } from '../elements/types';
+import type {
+    NoteboardElement,
+    ImageElement,
+    RectangleElement,
+    LineElement,
+    ArrowElement,
+    StickyNoteElement,
+    FrameElement,
+    StarElement,
+    CalloutElement,
+} from '../elements/types';
 import { isShapeElement } from '../elements/types';
 import { applyDropShadow, clearDropShadow, getCachedImage } from './utils';
 import { renderRectangle, renderEllipse, renderDiamond, renderTriangle, renderShapeText } from './renderShapes';
 import { renderLine, renderArrow, renderPen, renderLineMidLabel } from './renderLinear';
-import { renderFrame, renderStar } from './renderNew';
+import { renderStickyNote, renderFrame, renderStar, renderCallout } from './renderNew';
 
 // ─── Canvas clear ─────────────────────────────────────────────
 export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number) {
@@ -104,8 +114,10 @@ export function renderElement(ctx: CanvasRenderingContext2D, element: NoteboardE
             if (!excludeText) { clearDropShadow(ctx); renderText(ctx, element as any); }
             break;
         case 'image':     renderImage(ctx, element as ImageElement); break;
+        case 'sticky-note': renderStickyNote(ctx, element as StickyNoteElement); break;
         case 'frame':     renderFrame(ctx, element as FrameElement); break;
         case 'star':      renderStar(ctx, element as StarElement); break;
+        case 'callout':   renderCallout(ctx, element as CalloutElement); break;
     }
 
     clearDropShadow(ctx);

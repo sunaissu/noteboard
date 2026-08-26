@@ -1,6 +1,6 @@
 {
   "name": "@sunaissu/noteboard",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.",
   "keywords": [
     "react",
@@ -49,7 +49,8 @@
     "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",
     "dev": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --watch",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run check && npm run build",
+    "test": "npm run check && npm run build && npm run test:unit",
+    "test:unit": "node --test",
     "playground": "npm --prefix playground run dev",
     "playground:build": "npm --prefix playground run build",
     "prepublishOnly": "npm test"
@@ -65,7 +66,6 @@
     "yjs": "^13.6.31"
   },
   "peerDependencies": {
-    "@phosphor-icons/react": ">=2",
     "react": ">=18",
     "react-dom": ">=18",
     "yjs": "^13.6.31"

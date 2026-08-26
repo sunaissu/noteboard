@@ -28,7 +28,6 @@ import { ShadowSection } from './ShadowSection';
 import { LineSection } from './LineSection';
 import { TextSection } from './TextSection';
 import { PenSection } from './PenSection';
-import { FrameSection } from './FrameSection';
 import { StarSection } from './StarSection';
 
 export interface PropertiesPanelProps {
@@ -84,7 +83,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     const hasArrows = selectedElements.some((el) => el.type === 'arrow');
     const hasLines = selectedElements.some((el) => el.type === 'line');
     const hasPen = selectedElements.some((el) => el.type === 'pen');
-    const hasFrames = selectedElements.some((el) => el.type === 'frame');
     const hasStars = selectedElements.some((el) => el.type === 'star');
     const isMultiSelect = selectedElements.length > 1;
     const isLocked = selectedElements.some((el) => el.locked);
@@ -310,7 +308,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                         {showLineProps && <LineSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
                         {showTextProps && <TextSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
                         {hasPen && <PenSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
-                        {hasFrames && <FrameSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
                         {hasStars && <StarSection selectedElements={selectedElements} onUpdate={onUpdateElements} />}
                     </div>
                 </>

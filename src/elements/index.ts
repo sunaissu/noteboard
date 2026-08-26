@@ -9,6 +9,7 @@ export type {
     BlendMode,
     RoutingMode,
     DropShadow,
+    ElementBinding,
     NoteboardElementBase,
     RectangleElement,
     EllipseElement,
@@ -64,6 +65,16 @@ export {
     distanceToLineSegment,
 } from './hitTest';
 
+// Connector snapping and persistent shape bindings
+export {
+    CONNECTOR_SNAP_DISTANCE,
+    findBinding,
+    resolveBinding,
+    getClosestPointOnShapeOutline,
+    updateBoundElements,
+} from './connectorBinding';
+export type { ConnectorSnapResult } from './connectorBinding';
+
 // Element mutation
 export {
     mutateElement,
@@ -73,6 +84,7 @@ export {
     deleteElement,
     restoreElement,
     duplicateElement,
+    duplicateElements,
 } from './mutateElement';
 
 // Rendering utilities

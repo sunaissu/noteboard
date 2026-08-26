@@ -10,7 +10,6 @@ import {
     ArrowUpRightIcon,
     EraserIcon,
     PenIcon,
-    FrameCornersIcon,
     StarIcon,
     ImageIcon,
     NoteBlankIcon,
@@ -31,7 +30,6 @@ export const TOOL_REGISTRY: Record<Tool, ToolDefinition> = {
     text: { id: 'text', label: 'Text', icon: TextTIcon },
     eraser: { id: 'eraser', label: 'Eraser', icon: EraserIcon },
     image: { id: 'image', label: 'Image', icon: ImageIcon },
-    frame: { id: 'frame', label: 'Frame', icon: FrameCornersIcon },
     star: { id: 'star', label: 'Star', icon: StarIcon },
     'sticky-note': { id: 'sticky-note', label: 'Sticky Note', icon: NoteBlankIcon },
     callout: { id: 'callout', label: 'Callout', icon: ChatCircleIcon },
@@ -54,5 +52,5 @@ export const DEFAULT_SLOTS: ToolSlot[] = [
 export const ALL_TOOLS: Tool[] = [
     'select', 'pan', 'rectangle', 'ellipse', 'diamond', 'triangle',
     'line', 'text', 'arrow', 'eraser', 'pen', 'image',
-    'frame', 'star', 'sticky-note', 'callout',
+    'star', 'sticky-note', 'callout',
 ];

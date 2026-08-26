@@ -5,6 +5,12 @@ export { PropertiesPanel } from './components/PropertiesPanel';
 export { NoteboardPreview } from './components/NoteboardPreview';
 export { useToolbarShortcuts } from './hooks/useToolbarShortcuts';
 export { useCanvasDrawing } from './hooks/useCanvasDrawing';
+export {
+    MIN_CREATION_DISTANCE,
+    isElementMutationShortcut,
+    shouldCommitDrawnElement,
+} from './hooks/canvasUtils';
+export type { KeyboardShortcutLike } from './hooks/canvasUtils';
 export { useHistory } from './hooks/useHistory';
 export type { HistoryAPI } from './hooks/useHistory';
 export { TOOL_REGISTRY, DEFAULT_SLOTS, ALL_TOOLS } from './toolRegistry';

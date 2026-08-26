@@ -6,6 +6,32 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [Unreleased]
+
+---
+
+## [2.0.0] — 2026-08-26
+
+### Changed
+
+- **Outline connector snapping** — Lines and arrows now snap both endpoints to the actual rendered outline of rectangles, ellipses, diamonds, triangles, stars, sticky notes, and callouts, including rotated shapes.
+- **Self-contained icon runtime** — Toolbar and panel icons are bundled into Noteboard, so consumers no longer need to install `@phosphor-icons/react` separately and the CommonJS entry remains compatible with Node 18.
+
+### Removed
+
+- **Frame authoring (breaking)** — Removed Frame from the public authoring-tool types, tool registry, keyboard shortcuts, and properties UI. Existing serialized frame elements remain supported for rendering and persistence compatibility.
+
+### Fixed
+
+- **Persistent connections** — Snapped endpoint bindings are serialized and follow their target as it moves, resizes, or rotates. Repositioning a connector endpoint can attach or detach it cleanly, and deleting a target clears the stale binding.
+- **Binding-aware duplication** — Copying or duplicating connectors and their targets remaps endpoint bindings to the duplicated targets instead of reconnecting the copies to the originals.
+- **Callout interaction geometry** — Callout tails now participate in hit testing, marquee bounds, rotation, and connector snapping using the same geometry as the renderer.
+- **Read-only interaction guards** — Read-only boards ignore keyboard, clipboard, and in-progress text mutations while retaining navigation and view shortcuts.
+- **Controlled canvas crash** — Host callbacks now run outside React state updater functions, preventing synchronous Yjs/parent updates from causing render-phase client errors.
+- **Advanced tool crashes** — Sticky Note and Callout creation, sizing, rendering, and hit testing are fully dispatched, and their renderers keep the canvas state stack balanced.
+
+---
+
 ## [1.3.0] — 2026-08-03
 
 ### Added

@@ -3,6 +3,7 @@
  *   renderStickyNote, renderFrame, renderStar, renderCallout
  */
 import type { StickyNoteElement, FrameElement, StarElement, CalloutElement } from '../elements/types';
+import { getCalloutGeometry } from '../elements/calloutGeometry';
 
 // ─── Compat helper: rounded rect path (polyfills ctx.roundRect) ─────
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -79,8 +80,6 @@ export function renderStickyNote(ctx: CanvasRenderingContext2D, el: StickyNoteEl
     ctx.lineTo(x1 + w - fold, y1 + fold);
     ctx.lineTo(x1 + w, y1 + fold);
     ctx.stroke();
-    ctx.restore();
-
     ctx.restore();
 }
 
@@ -161,25 +160,13 @@ export function renderStar(ctx: CanvasRenderingContext2D, el: StarElement) {
     ctx.stroke();
 
     ctx.restore();
-
-    ctx.restore();
 }
 
 // ─── Callout ─────────────────────────────────────────────────
 
 export function renderCallout(ctx: CanvasRenderingContext2D, el: CalloutElement) {
-    const { x, y, width, height } = el;
-    const x1 = Math.min(x, x + width), y1 = Math.min(y, y + height);
-    const w = Math.abs(width), h = Math.abs(height);
-    const r = Math.min(10, w * 0.08, h * 0.08); // corner radius
-    const tailW = Math.min(20, w * 0.15);
-    const tailH = Math.min(20, h * 0.2);
-    const dir = el.tailDirection ?? 'bottom-left';
-
-    // Tail position offsets
-    const tailX = (dir === 'bottom-left' || dir === 'top-left') ? x1 + w * 0.25 : x1 + w * 0.75;
-    const tailBaseY = (dir.startsWith('bottom')) ? y1 + h : y1;
-    const tailTipY = tailBaseY + (dir.startsWith('bottom') ? tailH : -tailH);
+    const { body, tail } = getCalloutGeometry(el);
+    const [tailStart, tailTip, tailEnd] = tail;
 
     ctx.save();
 
@@ -189,14 +176,14 @@ export function renderCallout(ctx: CanvasRenderingContext2D, el: CalloutElement)
         ctx.fillStyle = '#ffffff';
     }
 
-    roundRectPath(ctx, x1, y1, w, h, r);
+    roundRectPath(ctx, body.x, body.y, body.width, body.height, body.radius);
     ctx.fill();
 
     // Tail
     ctx.beginPath();
-    ctx.moveTo(tailX - tailW / 2, tailBaseY);
-    ctx.lineTo(tailX, tailTipY);
-    ctx.lineTo(tailX + tailW / 2, tailBaseY);
+    ctx.moveTo(tailStart.x, tailStart.y);
+    ctx.lineTo(tailTip.x, tailTip.y);
+    ctx.lineTo(tailEnd.x, tailEnd.y);
     ctx.closePath();
     ctx.fill();
 
@@ -204,18 +191,16 @@ export function renderCallout(ctx: CanvasRenderingContext2D, el: CalloutElement)
     ctx.strokeStyle = el.strokeColor;
     ctx.lineWidth = el.strokeWidth;
     ctx.setLineDash([]);
-    roundRectPath(ctx, x1, y1, w, h, r);
+    roundRectPath(ctx, body.x, body.y, body.width, body.height, body.radius);
     ctx.stroke();
 
     // Stroke tail
     ctx.beginPath();
-    ctx.moveTo(tailX - tailW / 2, tailBaseY);
-    ctx.lineTo(tailX, tailTipY);
-    ctx.lineTo(tailX + tailW / 2, tailBaseY);
+    ctx.moveTo(tailStart.x, tailStart.y);
+    ctx.lineTo(tailTip.x, tailTip.y);
+    ctx.lineTo(tailEnd.x, tailEnd.y);
     ctx.closePath();
     ctx.stroke();
-
-    ctx.restore();
 
     ctx.restore();
 }

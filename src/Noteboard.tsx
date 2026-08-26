@@ -19,7 +19,7 @@ import type { NoteboardThemeMode } from './ThemeContext';
 import type { NoteboardProps, NoteboardRef, Tool, ShapeVariant } from './types';
 import { serializeBoard } from './session';
 import { generateId, createImageElement } from './elements/createElement';
-import { duplicateElement } from './elements/mutateElement';
+import { duplicateElements } from './elements/mutateElement';
 import {
     DEFAULT_FONT_SIZE,
     DEFAULT_FONT_FAMILY,
@@ -229,6 +229,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         primaryColor: resolvedTheme.primaryColor,
         primaryOverlay: resolvedTheme.primaryOverlay,
         isDark,
+        readOnly: isReadOnly,
         snapEnabled,
         showGrid,
         initialElements,
@@ -600,6 +601,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onPointerDown={isReadOnly ? undefined : handlers.onPointerDown}
                     onPointerMove={isReadOnly ? undefined : handlers.onPointerMove}
                     onPointerUp={isReadOnly ? undefined : handlers.onPointerUp}
+                    onPointerCancel={isReadOnly ? undefined : handlers.onPointerCancel}
                     onPointerLeave={isReadOnly ? undefined : handlers.onPointerLeave}
                     onWheel={handlers.onWheel}
                     onDoubleClick={isReadOnly ? undefined : handlers.onDoubleClick}
@@ -834,15 +836,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                             icon: '⎘',
                             disabled: !hasSelection,
                             onClick: () => {
-                                const groupMap = new Map<string, string>();
-                                const dupes = elements.filter((el) => selectedIds.has(el.id) && !el.isDeleted).map((el) => {
-                                    const base = duplicateElement(el);
-                                    if (el.groupId) {
-                                        if (!groupMap.has(el.groupId)) groupMap.set(el.groupId, generateId());
-                                        return { ...base, groupId: groupMap.get(el.groupId) };
-                                    }
-                                    return base;
-                                });
+                                const dupes = duplicateElements(
+                                    elements.filter((el) => selectedIds.has(el.id) && !el.isDeleted),
+                                );
                                 setElements((prev) => { history.record(prev); return [...prev, ...dupes]; });
                             },
                         },

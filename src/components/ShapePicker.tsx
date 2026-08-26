@@ -19,7 +19,6 @@ export const SHAPE_KEYS: Record<string, ShapeVariant> = {
     o: 'ellipse',
     d: 'diamond',
     t: 'triangle',
-    f: 'frame',
     s: 'star',
 };
 

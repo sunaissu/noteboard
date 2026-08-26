@@ -1,5 +1,6 @@
 import type { Point, NoteboardElement } from './types';
 import { rotatePoint, getElementBounds } from './bounds';
+import { getCalloutGeometry } from './calloutGeometry';
 
 // ─── Geometry Helpers ────────────────────────────────────────
 
@@ -148,6 +149,42 @@ function hitTestTriangle(
     return pointInPolygon(rp, verts);
 }
 
+function hitTestCallout(
+    point: Point,
+    element: Extract<NoteboardElement, { type: 'callout' }>,
+    threshold: number,
+): boolean {
+    const cx = element.x + element.width / 2;
+    const cy = element.y + element.height / 2;
+    const rp = element.angle !== 0
+        ? rotatePoint(point.x, point.y, cx, cy, -element.angle)
+        : point;
+    const { body, tail } = getCalloutGeometry(element);
+    const tolerance = Math.max(0, threshold);
+
+    if (
+        rp.x >= body.x - tolerance &&
+        rp.x <= body.x + body.width + tolerance &&
+        rp.y >= body.y - tolerance &&
+        rp.y <= body.y + body.height + tolerance
+    ) {
+        return true;
+    }
+
+    const tailPoints = [...tail];
+    if (pointInPolygon(rp, tailPoints)) return true;
+    for (let index = 0; index < tailPoints.length; index++) {
+        if (distanceToLineSegment(
+            rp,
+            tailPoints[index],
+            tailPoints[(index + 1) % tailPoints.length],
+        ) <= tolerance) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function hitTestLinear(
     point: Point,
     element: NoteboardElement & { points: Point[] },
@@ -231,8 +268,11 @@ export function hitTestElement(
         case 'text':
             return hitTestText(point, element, threshold);
         case 'image':
+        case 'sticky-note':
         case 'frame':
             return hitTestRectangle(point, element, threshold);
+        case 'callout':
+            return hitTestCallout(point, element, threshold);
         case 'star': {
             // Use bounding box hit test for star (polygon internals are complex)
             return hitTestRectangle(point, element, threshold);

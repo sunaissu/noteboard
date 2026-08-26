@@ -3,9 +3,9 @@ import type { NoteboardBrandColors, NoteboardTheme, NoteboardThemeMode } from '.
 import type { NoteboardElement } from './elements/types';
 import type { NoteboardSession, NoteboardViewport } from './session';
 
-export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'text' | 'arrow' | 'eraser' | 'pen' | 'image' | 'frame' | 'star' | 'sticky-note' | 'callout';
+export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'text' | 'arrow' | 'eraser' | 'pen' | 'image' | 'star' | 'sticky-note' | 'callout';
 
-export type ShapeVariant = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'frame' | 'star';
+export type ShapeVariant = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'star';
 
 export type ToolbarPosition = 'top' | 'bottom' | 'left' | 'right';
 

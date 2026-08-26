@@ -10,10 +10,10 @@
 ## 🚀 Features
 
 - **Rich Toolset** — Draw shapes (rectangles, ellipses, diamonds, triangles, stars/polygons), lines, auto-connecting arrows, text, freehand pen, and images.
-- **Advanced Elements** — Built-in support for Sticky Notes, Callouts, and Frames.
-- **Connector Snapping** — Arrows and lines snap their endpoints to shape anchor points (edges, corners, center) when drawn near them. A purple ring highlights the snap target.
+- **Advanced Elements** — Built-in support for Sticky Notes and Callouts.
+- **Persistent Connector Snapping** — Line and arrow endpoints snap anywhere along the visible outline of nearby shapes. Attachments follow the shape when it moves, resizes, or rotates and persist in saved or collaborative boards.
 - **Smart Grouping & Locking** — Group shapes, lock elements in place, and control z-order.
-- **Collapsible Properties Panel** — The entire panel can be collapsed to a thin header bar. Individual property sections (Appearance, Drop Shadow, Text, Line/Arrow, Pen, Shape, Frame) also collapse independently via chevron toggles.
+- **Collapsible Properties Panel** — The entire panel can be collapsed to a thin header bar. Individual property sections (Appearance, Drop Shadow, Text, Line/Arrow, Pen, Shape) also collapse independently via chevron toggles.
 - **Snap-to-Grid & Alignment Guides** — Dot-grid overlay, snap-to-grid, and smart alignment tools for precise layouts.
 - **Undo / Redo Toolbar Buttons** — ↩ / ↪ buttons surface the full undo/redo history directly in the toolbar strip.
 - **Right-Click Context Menu** — Copy, Paste, Duplicate, Bring Forward / Send Backward, Bring to Front / Send to Back, Select All, and Delete — all accessible via right-click anywhere on the canvas.
@@ -30,14 +30,12 @@
 ## 📦 Installation
 
 ```bash
-npm install @sunaissu/noteboard @phosphor-icons/react
+npm install @sunaissu/noteboard
 # or
-yarn add @sunaissu/noteboard @phosphor-icons/react
+yarn add @sunaissu/noteboard
 # or
-pnpm add @sunaissu/noteboard @phosphor-icons/react
+pnpm add @sunaissu/noteboard
 ```
-
-> `@phosphor-icons/react` is a required peer dependency for toolbar and panel icons.
 
 ---
 
@@ -193,6 +191,8 @@ export function MultiplayerBoard() {
 ```
 
 Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values, z-order in a `Y.Array`, and the viewport in a dedicated `Y.Map`, allowing concurrent changes to merge without coupling the package to authentication, persistence, or a particular transport.
+
+Connector `startBinding` and `endBinding` metadata is part of each line or arrow element, so the adapter and normal JSON session serialization preserve snapped connections automatically.
 
 ---
 

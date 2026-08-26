@@ -27,6 +27,16 @@ export interface DropShadow {
     spread?: number;
 }
 
+/**
+ * A persistent connector attachment to a point on another element's outline.
+ * `fixedPoint` is stored in the target's unrotated, normalized local space so
+ * the attachment survives target movement, resizing, and rotation.
+ */
+export interface ElementBinding {
+    elementId: string;
+    fixedPoint: Point;
+}
+
 // ─── Base Element ────────────────────────────────────────────
 
 export interface NoteboardElementBase {
@@ -114,6 +124,10 @@ export interface LineElement extends NoteboardElementBase {
     label?: string;
     labelFontSize?: number;
     labelFontFamily?: string;
+    /** Persistent attachment for the first endpoint. */
+    startBinding?: ElementBinding | null;
+    /** Persistent attachment for the final endpoint. */
+    endBinding?: ElementBinding | null;
 }
 
 export interface ArrowElement extends NoteboardElementBase {
@@ -128,6 +142,10 @@ export interface ArrowElement extends NoteboardElementBase {
     label?: string;
     labelFontSize?: number;
     labelFontFamily?: string;
+    /** Persistent attachment for the first endpoint. */
+    startBinding?: ElementBinding | null;
+    /** Persistent attachment for the final endpoint. */
+    endBinding?: ElementBinding | null;
 }
 
 export interface TextElement extends NoteboardElementBase {
@@ -175,7 +193,10 @@ export interface StickyNoteElement extends NoteboardElementBase, ShapeTextFields
     noteColor: string;
 }
 
-/** Frame: a named container; children move with the frame */
+/**
+ * @deprecated Legacy serialized-board compatibility only. Frames are no longer
+ * available as an authoring tool, but old boards continue to render and save.
+ */
 export interface FrameElement extends NoteboardElementBase {
     type: 'frame';
     name: string;

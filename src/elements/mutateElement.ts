@@ -99,9 +99,69 @@ export function duplicateElement<T extends NoteboardElement>(
     element: T,
     offset: number = 10,
 ): T {
-    return mutateElement(element, {
+    const duplicate = mutateElement(element, {
         id: generateId(),
         x: element.x + offset,
         y: element.y + offset,
     } as Partial<T>);
+
+    if (duplicate.type !== 'line' && duplicate.type !== 'arrow') return duplicate;
+    return {
+        ...duplicate,
+        startBinding: null,
+        endBinding: null,
+    } as T;
+}
+
+/**
+ * Duplicate a coherent set of elements while preserving relationships inside
+ * that set. Connector bindings to duplicated targets are remapped to the new
+ * IDs; bindings to targets outside the set are cleared so the positional
+ * offset is not immediately undone by binding resolution.
+ */
+export function duplicateElements<T extends NoteboardElement>(
+    elements: readonly T[],
+    offset: number = 10,
+): T[] {
+    const idMap = new Map(elements.map((element) => [element.id, generateId()]));
+    const groupMap = new Map<string, string>();
+
+    return elements.map((element) => {
+        const duplicate = mutateElement(element, {
+            id: idMap.get(element.id)!,
+            x: element.x + offset,
+            y: element.y + offset,
+            ...(element.groupId
+                ? {
+                    groupId: (() => {
+                        let duplicateGroupId = groupMap.get(element.groupId!);
+                        if (!duplicateGroupId) {
+                            duplicateGroupId = generateId();
+                            groupMap.set(element.groupId!, duplicateGroupId);
+                        }
+                        return duplicateGroupId;
+                    })(),
+                }
+                : {}),
+        } as Partial<T>);
+
+        if (duplicate.type !== 'line' && duplicate.type !== 'arrow') return duplicate;
+
+        const remapBinding = (binding: typeof duplicate.startBinding) => {
+            if (!binding) return null;
+            const duplicateTargetId = idMap.get(binding.elementId);
+            if (!duplicateTargetId) return null;
+            return {
+                ...binding,
+                elementId: duplicateTargetId,
+                fixedPoint: { ...binding.fixedPoint },
+            };
+        };
+
+        return {
+            ...duplicate,
+            startBinding: remapBinding(duplicate.startBinding),
+            endBinding: remapBinding(duplicate.endBinding),
+        } as T;
+    });
 }

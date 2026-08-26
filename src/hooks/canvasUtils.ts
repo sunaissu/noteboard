@@ -136,8 +136,55 @@ export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<s
 
 // ─── Tool classification ────────────────────────────────────────────
 
-export type DrawTool = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'line' | 'arrow' | 'pen' | 'sticky-note' | 'frame' | 'star' | 'callout';
+export type DrawTool = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'line' | 'arrow' | 'pen' | 'sticky-note' | 'star' | 'callout';
 
 export function isDrawingTool(tool: string): tool is DrawTool {
-    return ['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow', 'pen', 'sticky-note', 'frame', 'star', 'callout'].includes(tool);
+    return ['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow', 'pen', 'sticky-note', 'star', 'callout'].includes(tool);
+}
+
+export interface KeyboardShortcutLike {
+    key: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+}
+
+/** Whether a keyboard shortcut can mutate the element collection. */
+export function isElementMutationShortcut(event: KeyboardShortcutLike): boolean {
+    const isCtrl = !!(event.ctrlKey || event.metaKey);
+    const key = event.key.toLowerCase();
+
+    if (event.key === 'Backspace' || event.key === 'Delete') return true;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', '[', ']'].includes(event.key)) return true;
+    return isCtrl && ['z', 'y', 'v', 'd', 'g'].includes(key);
+}
+
+/** Minimum intentional creation movement, measured in CSS pixels. */
+export const MIN_CREATION_DISTANCE = 5;
+
+/**
+ * Decide whether a draft has enough visible geometry and raw pointer travel to
+ * persist. `rawDistance` is in canvas units and prevents snapping from turning
+ * a tiny hand jitter into a much larger committed element.
+ */
+export function shouldCommitDrawnElement(
+    element: NoteboardElement,
+    zoom: number,
+    rawDistance = Math.hypot(element.width, element.height),
+): boolean {
+    if (element.type === 'pen' || element.type === 'draw') {
+        const first = element.points[0];
+        return !!first && element.points.some((point) => point.x !== first.x || point.y !== first.y);
+    }
+
+    if (rawDistance * zoom < MIN_CREATION_DISTANCE) return false;
+
+    if (element.type === 'line' || element.type === 'arrow') {
+        return Math.hypot(element.width, element.height) * zoom >= MIN_CREATION_DISTANCE;
+    }
+
+    return (
+        Math.abs(element.width) * zoom >= MIN_CREATION_DISTANCE &&
+        Math.abs(element.height) * zoom >= MIN_CREATION_DISTANCE
+    );
 }
