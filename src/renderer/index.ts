@@ -65,23 +65,32 @@ function renderText(
 }
 
 // ─── Image ────────────────────────────────────────────────────
-function renderImage(ctx: CanvasRenderingContext2D, element: ImageElement) {
+function renderImage(
+    ctx: CanvasRenderingContext2D,
+    element: ImageElement,
+    onImageSettled?: () => void,
+) {
     const { x, y, width, height, dataUrl, id } = element;
     if (!dataUrl) return;
-    const img = getCachedImage(dataUrl, id);
-    if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, x, y, width, height);
+    const { image, status } = getCachedImage(dataUrl, id, onImageSettled);
+    if (status === 'loaded' || (image.complete && image.naturalWidth > 0)) {
+        ctx.drawImage(image, x, y, width, height);
     } else {
         ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x, y, width, height);
         ctx.strokeStyle = '#ccc'; ctx.strokeRect(x, y, width, height);
         ctx.fillStyle = '#999'; ctx.font = '12px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('Loading...', x + width / 2, y + height / 2);
+        ctx.fillText(status === 'error' ? 'Image unavailable' : 'Loading...', x + width / 2, y + height / 2);
     }
 }
 
 // ─── Main Switch ──────────────────────────────────────────────
-export function renderElement(ctx: CanvasRenderingContext2D, element: NoteboardElement, excludeText = false) {
+export function renderElement(
+    ctx: CanvasRenderingContext2D,
+    element: NoteboardElement,
+    excludeText = false,
+    onImageSettled?: () => void,
+) {
     if (element.isDeleted) return;
 
     ctx.save();
@@ -113,7 +122,7 @@ export function renderElement(ctx: CanvasRenderingContext2D, element: NoteboardE
         case 'text':      
             if (!excludeText) { clearDropShadow(ctx); renderText(ctx, element as any); }
             break;
-        case 'image':     renderImage(ctx, element as ImageElement); break;
+        case 'image':     renderImage(ctx, element as ImageElement, onImageSettled); break;
         case 'sticky-note': renderStickyNote(ctx, element as StickyNoteElement); break;
         case 'frame':     renderFrame(ctx, element as FrameElement); break;
         case 'star':      renderStar(ctx, element as StarElement); break;
@@ -140,7 +149,13 @@ export function renderElement(ctx: CanvasRenderingContext2D, element: NoteboardE
 }
 
 // ─── Batch render ─────────────────────────────────────────────
-export function renderElements(ctx: CanvasRenderingContext2D, elements: readonly NoteboardElement[], width: number, height: number) {
+export function renderElements(
+    ctx: CanvasRenderingContext2D,
+    elements: readonly NoteboardElement[],
+    width: number,
+    height: number,
+    onImageSettled?: () => void,
+) {
     clearCanvas(ctx, width, height);
-    for (const el of elements) { if (!el) continue; renderElement(ctx, el); }
+    for (const el of elements) { if (!el) continue; renderElement(ctx, el, false, onImageSettled); }
 }

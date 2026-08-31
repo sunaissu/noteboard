@@ -40,7 +40,10 @@ export function useHistory(): HistoryAPI {
     const undoStackRef = useRef<NoteboardElement[][]>([]);
     const redoStackRef = useRef<NoteboardElement[][]>([]);
 
-    const clone = (els: NoteboardElement[]) => els.map((el) => ({ ...el }));
+    const clone = (els: NoteboardElement[]): NoteboardElement[] => {
+        if (typeof structuredClone === 'function') return structuredClone(els);
+        return JSON.parse(JSON.stringify(els)) as NoteboardElement[];
+    };
 
     const record = useCallback((elementsBefore: NoteboardElement[]) => {
         undoStackRef.current.push(clone(elementsBefore));

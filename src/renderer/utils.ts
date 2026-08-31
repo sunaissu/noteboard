@@ -34,15 +34,78 @@ export function drawJitteredLine(
 }
 
 // ─── Image cache ──────────────────────────────────────────────
-const imageCache = new Map<string, HTMLImageElement>();
+type CachedImageStatus = 'loading' | 'loaded' | 'error';
 
-export function getCachedImage(dataUrl: string, id: string): HTMLImageElement | null {
-    if (imageCache.has(id)) return imageCache.get(id)!;
-    const img = new Image();
-    img.src = dataUrl;
-    img.onload = () => { imageCache.set(id, img); };
-    imageCache.set(id, img);
-    return img;
+interface CachedImage {
+    image: HTMLImageElement;
+    lastUsedAt: number;
+    listeners: Set<() => void>;
+    status: CachedImageStatus;
+}
+
+/** Keep previews and long-lived boards from retaining stale image sources. */
+const MAX_IMAGE_CACHE_ENTRIES = 100;
+const IMAGE_CACHE_IDLE_MS = 60_000;
+const imageCache = new Map<string, CachedImage>();
+
+const touchImageCacheEntry = (key: string, entry: CachedImage) => {
+    entry.lastUsedAt = Date.now();
+    imageCache.delete(key);
+    imageCache.set(key, entry);
+};
+
+const trimImageCache = () => {
+    if (imageCache.size <= MAX_IMAGE_CACHE_ENTRIES) return;
+    const idleBefore = Date.now() - IMAGE_CACHE_IDLE_MS;
+    for (const [key, entry] of imageCache) {
+        if (imageCache.size <= MAX_IMAGE_CACHE_ENTRIES) return;
+        // A board can legitimately show more than the nominal cache limit.
+        // Only discard idle sources so a large active board does not reload
+        // its images on every repaint and enter an endless cache-thrash loop.
+        if (entry.lastUsedAt > idleBefore) continue;
+        entry.image.onload = null;
+        entry.image.onerror = null;
+        entry.listeners.clear();
+        imageCache.delete(key);
+    }
+};
+
+export function getCachedImage(
+    dataUrl: string,
+    _id: string,
+    onSettled?: () => void,
+): { image: HTMLImageElement; status: CachedImageStatus } {
+    // The image source, rather than the element ID, is the cache identity.
+    // Different boards may legitimately contain the same serialized element
+    // ID with different image contents and must not evict each other forever.
+    const cached = imageCache.get(dataUrl);
+    if (cached) {
+        if (onSettled && cached.status === 'loading') cached.listeners.add(onSettled);
+        touchImageCacheEntry(dataUrl, cached);
+        return { image: cached.image, status: cached.status };
+    }
+
+    const image = new Image();
+    const entry: CachedImage = {
+        image,
+        lastUsedAt: Date.now(),
+        listeners: new Set(onSettled ? [onSettled] : []),
+        status: 'loading',
+    };
+    const settle = (status: Exclude<CachedImageStatus, 'loading'>) => {
+        // Ignore a stale request that was replaced under the same element ID.
+        if (imageCache.get(dataUrl) !== entry) return;
+        entry.status = status;
+        const listeners = [...entry.listeners];
+        entry.listeners.clear();
+        listeners.forEach((listener) => listener());
+    };
+    image.onload = () => settle('loaded');
+    image.onerror = () => settle('error');
+    imageCache.set(dataUrl, entry);
+    trimImageCache();
+    image.src = dataUrl;
+    return { image, status: entry.status };
 }
 
 // ─── Drop shadow helpers ──────────────────────────────────────

@@ -122,11 +122,16 @@ export function moveBackward(elements: NoteboardElement[], ids: Set<string>): No
 // ─── Grouping ────────────────────────────────────────────────
 
 export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<string>): Set<string> {
-    const expanded = new Set(ids);
-    for (const id of ids) {
+    const expanded = new Set(
+        [...ids].filter((id) => {
+            const element = elements.find((candidate) => candidate.id === id);
+            return element && !element.isDeleted && !element.locked;
+        }),
+    );
+    for (const id of expanded) {
         const el = elements.find((e) => e.id === id);
         if (el?.groupId) {
-            for (const m of elements.filter((e) => e.groupId === el.groupId && !e.isDeleted)) {
+            for (const m of elements.filter((e) => e.groupId === el.groupId && !e.isDeleted && !e.locked)) {
                 expanded.add(m.id);
             }
         }

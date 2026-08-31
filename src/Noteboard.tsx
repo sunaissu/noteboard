@@ -17,7 +17,7 @@ import { DEFAULT_SLOTS } from './toolRegistry';
 import { ThemeContext, LIGHT_THEME, DARK_THEME, applyNoteboardBrandColors, useResolvedNoteboardTheme } from './ThemeContext';
 import type { NoteboardThemeMode } from './ThemeContext';
 import type { NoteboardProps, NoteboardRef, Tool, ShapeVariant } from './types';
-import { serializeBoard } from './session';
+import { MAX_BOARD_IMPORT_BYTES, deserializeBoard, serializeBoard } from './session';
 import { generateId, createImageElement } from './elements/createElement';
 import { duplicateElements } from './elements/mutateElement';
 import {
@@ -27,7 +27,7 @@ import {
     MAX_ZOOM,
     SELECTION_COLOR,
  } from './constants';
-import { isShapeElement } from './elements/types';
+import { isLockedElement, isShapeElement } from './elements/types';
 
 
 export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
@@ -130,22 +130,24 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         [controlledTool, onToolSelect],
     );
 
-    useToolbarShortcuts(slots, handleToolSelect);
+    useToolbarShortcuts(slots, handleToolSelect, isFocused);
 
     // ─── ? key → shortcut modal ──────────────────────────────
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
+            if (!isFocused) return;
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.key === '?') setShortcutOpen((v) => !v);
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, []);
+    }, [isFocused]);
 
     // ─── Shape keyboard shortcuts (R, O, D, T) + G for grid ─────────
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
+            if (!isFocused) return;
             // Skip if typing in an input
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -164,7 +166,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [handleShapeSelect]);
+    }, [handleShapeSelect, isFocused]);
 
     // Track container size
     useEffect(() => {
@@ -230,6 +232,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         primaryOverlay: resolvedTheme.primaryOverlay,
         isDark,
         readOnly: isReadOnly,
+        keyboardEnabled: isFocused,
         snapEnabled,
         showGrid,
         initialElements,
@@ -393,18 +396,21 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const handleImportJSON = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.size > MAX_BOARD_IMPORT_BYTES) {
+            alert('Failed to load Noteboard file. The file is too large.');
+            e.target.value = '';
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const session = JSON.parse(event.target?.result as string);
-                if (session && Array.isArray(session.elements)) {
-                    setElements(session.elements);
-                    if (session.viewport) {
-                        setPanOffset({ x: session.viewport.panX, y: session.viewport.panY });
-                        setZoom(session.viewport.zoom);
-                    }
-                    history.record(session.elements);
-                }
+                const snapshot = deserializeBoard(JSON.parse(event.target?.result as string));
+                setElements((previous) => {
+                    history.record(previous);
+                    return snapshot.elements;
+                });
+                setPanOffset({ x: snapshot.viewport.panX, y: snapshot.viewport.panY });
+                setZoom(snapshot.viewport.zoom);
             } catch (err) {
                 console.error("Failed to parse JSON", err);
                 alert("Failed to load Noteboard file. The file might be corrupted.");
@@ -437,18 +443,32 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     const handleUpdateElements = useCallback(
         (updates: Record<string, any>) => {
-            setElements((prev) =>
-                prev.map((el) =>
-                    selectedIds.has(el.id) ? { ...el, ...updates } : el,
-                ),
-            );
+            setElements((prev) => {
+                const editableIds = new Set(
+                    prev
+                        .filter((el) => selectedIds.has(el.id) && !isLockedElement(el))
+                        .map((el) => el.id),
+                );
+                if (editableIds.size === 0) return prev;
+                history.record(prev);
+                return prev.map((el) =>
+                    editableIds.has(el.id) ? { ...el, ...updates } : el,
+                );
+            });
         },
-        [selectedIds, setElements],
+        [history, selectedIds, setElements],
     );
 
     // ─── Align callbacks (wired to AppearanceSection) ─────────
     const makeAlignCallback = useCallback((fn: (els: typeof elements, ids: Set<string>) => typeof elements) => () => {
-        setElements((prev) => { history.record(prev); return fn(prev, selectedIds); });
+        setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
+            history.record(prev);
+            return fn(prev, editableIds);
+        });
     }, [selectedIds, setElements, history]);
 
     const handleAlignLeft    = makeAlignCallback(alignLeft);
@@ -463,10 +483,14 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     // ─── Z-ordering & grouping callbacks for PropertiesPanel ──
     const handleBringForward = useCallback(() => {
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
             history.record(prev);
             const result = [...prev];
             for (let i = result.length - 2; i >= 0; i--) {
-                if (selectedIds.has(result[i].id) && !selectedIds.has(result[i + 1].id)) {
+                if (editableIds.has(result[i].id) && !editableIds.has(result[i + 1].id)) {
                     [result[i], result[i + 1]] = [result[i + 1], result[i]];
                 }
             }
@@ -476,10 +500,14 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     const handleSendBackward = useCallback(() => {
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
             history.record(prev);
             const result = [...prev];
             for (let i = 1; i < result.length; i++) {
-                if (selectedIds.has(result[i].id) && !selectedIds.has(result[i - 1].id)) {
+                if (editableIds.has(result[i].id) && !editableIds.has(result[i - 1].id)) {
                     [result[i - 1], result[i]] = [result[i], result[i - 1]];
                 }
             }
@@ -489,43 +517,60 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     const handleBringToFront = useCallback(() => {
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
             history.record(prev);
-            const rest = prev.filter((el) => !selectedIds.has(el.id));
-            const sel = prev.filter((el) => selectedIds.has(el.id));
+            const rest = prev.filter((el) => !editableIds.has(el.id));
+            const sel = prev.filter((el) => editableIds.has(el.id));
             return [...rest, ...sel];
         });
     }, [selectedIds, setElements, history]);
 
     const handleSendToBack = useCallback(() => {
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
             history.record(prev);
-            const sel = prev.filter((el) => selectedIds.has(el.id));
-            const rest = prev.filter((el) => !selectedIds.has(el.id));
+            const sel = prev.filter((el) => editableIds.has(el.id));
+            const rest = prev.filter((el) => !editableIds.has(el.id));
             return [...sel, ...rest];
         });
     }, [selectedIds, setElements, history]);
 
     const handleGroup = useCallback(() => {
-        if (selectedIds.size < 2) return;
         const groupId = generateId();
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size < 2) return prev;
             history.record(prev);
-            return prev.map((el) => selectedIds.has(el.id) ? { ...el, groupId } : el);
+            return prev.map((el) => editableIds.has(el.id) ? { ...el, groupId } : el);
         });
     }, [selectedIds, setElements, history]);
 
     const handleUngroup = useCallback(() => {
         setElements((prev) => {
+            const editableIds = new Set(
+                prev.filter((el) => selectedIds.has(el.id) && !isLockedElement(el)).map((el) => el.id),
+            );
+            if (editableIds.size === 0) return prev;
             history.record(prev);
-            return prev.map((el) => selectedIds.has(el.id) ? { ...el, groupId: undefined } : el);
+            return prev.map((el) => editableIds.has(el.id) ? { ...el, groupId: undefined } : el);
         });
     }, [selectedIds, setElements, history]);
 
     const handleToggleLock = useCallback(() => {
         setElements((prev) => {
+            const shouldLock = prev.some((el) => selectedIds.has(el.id) && !el.locked);
+            if (!prev.some((el) => selectedIds.has(el.id))) return prev;
             history.record(prev);
             return prev.map((el) =>
-                selectedIds.has(el.id) ? { ...el, locked: !el.locked } : el,
+                selectedIds.has(el.id) ? { ...el, locked: shouldLock } : el,
             );
         });
     }, [selectedIds, setElements, history]);
@@ -596,13 +641,14 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                         width: '100%',
                         height: '100%',
                         pointerEvents: textEdit.active ? 'none' : 'auto',
-                        cursor: isReadOnly ? 'default' : undefined,
+                        cursor: isReadOnly ? 'grab' : undefined,
                     }}
-                    onPointerDown={isReadOnly ? undefined : handlers.onPointerDown}
-                    onPointerMove={isReadOnly ? undefined : handlers.onPointerMove}
-                    onPointerUp={isReadOnly ? undefined : handlers.onPointerUp}
-                    onPointerCancel={isReadOnly ? undefined : handlers.onPointerCancel}
-                    onPointerLeave={isReadOnly ? undefined : handlers.onPointerLeave}
+                    onPointerDownCapture={() => containerRef.current?.focus({ preventScroll: true })}
+                    onPointerDown={handlers.onPointerDown}
+                    onPointerMove={handlers.onPointerMove}
+                    onPointerUp={handlers.onPointerUp}
+                    onPointerCancel={handlers.onPointerCancel}
+                    onPointerLeave={handlers.onPointerLeave}
                     onWheel={handlers.onWheel}
                     onDoubleClick={isReadOnly ? undefined : handlers.onDoubleClick}
                     onContextMenu={(e) => {
@@ -818,7 +864,12 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 )}
 
                 {contextMenu && (() => {
-                    const hasSelection = selectedIds.size > 0;
+                    const editableSelectedIds = new Set(
+                        elements
+                            .filter((element) => selectedIds.has(element.id) && !element.isDeleted && !isLockedElement(element))
+                            .map((element) => element.id),
+                    );
+                    const hasSelection = editableSelectedIds.size > 0;
                     const items: ContextMenuItem[] = [
                         {
                             label: 'Copy',
@@ -837,7 +888,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                             disabled: !hasSelection,
                             onClick: () => {
                                 const dupes = duplicateElements(
-                                    elements.filter((el) => selectedIds.has(el.id) && !el.isDeleted),
+                                    elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted),
                                 );
                                 setElements((prev) => { history.record(prev); return [...prev, ...dupes]; });
                             },
@@ -872,7 +923,11 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                             label: 'Select All',
                             icon: '□',
                             onClick: () => {
-                                const ids = new Set(elements.filter((el) => !el.isDeleted).map((el) => el.id));
+                                const ids = new Set(
+                                    elements
+                                        .filter((el) => !el.isDeleted && !isLockedElement(el))
+                                        .map((el) => el.id),
+                                );
                                 setSelectedIds(ids);
                             },
                         },
@@ -882,7 +937,10 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                             danger: true,
                             disabled: !hasSelection,
                             onClick: () => {
-                                setElements((prev) => { history.record(prev); return prev.map((el) => selectedIds.has(el.id) ? { ...el, isDeleted: true } : el); });
+                                setElements((prev) => {
+                                    history.record(prev);
+                                    return prev.map((el) => editableSelectedIds.has(el.id) ? { ...el, isDeleted: true } : el);
+                                });
                                 setSelectedIds(new Set());
                             },
                         },

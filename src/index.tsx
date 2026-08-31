@@ -18,7 +18,7 @@ export { renderElements, renderElement, clearCanvas } from './renderer';
 export { LIGHT_THEME, DARK_THEME, applyNoteboardBrandColors, useNoteboardTheme, useResolvedNoteboardTheme } from './ThemeContext';
 export type { NoteboardBrandColors, NoteboardResolvedTheme, NoteboardTheme, NoteboardThemeMode } from './ThemeContext';
 export * from './elements';
-export { serializeBoard, deserializeBoard } from './session';
+export { MAX_BOARD_ELEMENTS, MAX_BOARD_IMPORT_BYTES, serializeBoard, deserializeBoard } from './session';
 export type { NoteboardSession, NoteboardViewport, SerializeMeta, DeserializedBoard } from './session';
 export type {
     Tool,

@@ -94,33 +94,59 @@ export function useYjsNoteboard(
     const [viewport, setViewport] = useState<NoteboardViewport>(readViewport);
 
     useEffect(() => {
-        const refresh = () => setElements(readElements(stores.elements, stores.order));
-        stores.elements.observeDeep(refresh);
-        stores.order.observe(refresh);
+        const refresh = (transaction?: Y.Transaction) => {
+            // Local board mutations are already applied optimistically by
+            // onElementsChange. Re-reading them through Yjs creates a fresh
+            // array which controlled hosts can deliver after a newer pointer
+            // update, making active drags jump back to an older position.
+            if (transaction?.origin === localOrigin) return;
+            setElements(readElements(stores.elements, stores.order));
+        };
+        const refreshElements = (
+            _events: Y.YEvent<Y.Map<unknown>>[],
+            transaction: Y.Transaction,
+        ) => refresh(transaction);
+        const refreshOrder = (
+            _event: Y.YArrayEvent<string>,
+            transaction: Y.Transaction,
+        ) => refresh(transaction);
+        stores.elements.observeDeep(refreshElements);
+        stores.order.observe(refreshOrder);
 
         const initialElements = options.initialElements;
         if (stores.elements.size === 0 && initialElements?.length) {
             document.transact(() => {
                 initialElements.forEach((element) => {
                     const value = new Y.Map<unknown>();
-                    writeElement(value, element);
                     stores.elements.set(element.id, value);
+                    writeElement(value, element);
                 });
                 stores.order.insert(0, initialElements.map((element) => element.id));
             }, localOrigin);
+            setElements(initialElements);
         } else {
             refresh();
         }
 
         return () => {
-            stores.elements.unobserveDeep(refresh);
-            stores.order.unobserve(refresh);
+            stores.elements.unobserveDeep(refreshElements);
+            stores.order.unobserve(refreshOrder);
         };
     }, [document, localOrigin, options.initialElements, stores]);
 
     useEffect(() => {
-        const refresh = () => setViewport(readViewport());
-        stores.viewport.observe(refresh);
+        const refresh = (transaction?: Y.Transaction) => {
+            // As with elements, avoid reflecting an older local viewport echo
+            // back into a controlled canvas. Remote viewport transactions are
+            // still adopted normally.
+            if (transaction?.origin === localOrigin) return;
+            setViewport(readViewport());
+        };
+        const refreshViewport = (
+            _event: Y.YMapEvent<number>,
+            transaction: Y.Transaction,
+        ) => refresh(transaction);
+        stores.viewport.observe(refreshViewport);
 
         if (stores.viewport.size === 0 && options.initialViewport) {
             document.transact(() => {
@@ -128,11 +154,12 @@ export function useYjsNoteboard(
                 stores.viewport.set('panY', options.initialViewport!.panY);
                 stores.viewport.set('zoom', options.initialViewport!.zoom);
             }, localOrigin);
+            setViewport(readViewport());
         } else {
             refresh();
         }
 
-        return () => stores.viewport.unobserve(refresh);
+        return () => stores.viewport.unobserve(refreshViewport);
     }, [document, localOrigin, options.initialViewport, readViewport, stores.viewport]);
 
     const onElementsChange = useCallback((nextElements: NoteboardElement[]) => {
@@ -158,6 +185,9 @@ export function useYjsNoteboard(
                 if (nextOrder.length) stores.order.insert(0, nextOrder);
             }
         }, localOrigin);
+        // Publish the exact local snapshot once. The observers above ignore
+        // this transaction so a reconstructed echo cannot race a later drag.
+        setElements(nextElements);
     }, [document, localOrigin, stores]);
 
     const onViewportChange = useCallback((nextViewport: NoteboardViewport) => {
@@ -179,6 +209,7 @@ export function useYjsNoteboard(
                 stores.viewport.set('zoom', normalizedViewport.zoom);
             }
         }, localOrigin);
+        setViewport(normalizedViewport);
     }, [document, localOrigin, stores.viewport]);
 
     return { elements, onElementsChange, onViewportChange, viewport };

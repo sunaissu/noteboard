@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { renderElement } from '../renderer';
 import type { NoteboardElement } from '../elements/types';
+import { getElementBounds } from '../elements/bounds';
 
 export interface NoteboardPreviewProps {
-    elements: NoteboardElement[] | any[];
+    elements: NoteboardElement[];
     width?: number | string;
     height?: number | string;
     className?: string;
@@ -22,79 +23,94 @@ export function NoteboardPreview({
 }: NoteboardPreviewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // Use a fixed internal resolution for rendering, scaled down by CSS.
-    // This ensures crisp rendering on high-DPI displays if needed,
-    // though for a simple preview 800x400 internal resolution is plenty.
-    const internalWidth = 800;
-    const internalHeight = 400;
+    // These dimensions are only the initial/fallback backing-store size. Once
+    // mounted, the canvas tracks its rendered CSS size and device-pixel ratio.
+    const fallbackWidth = 800;
+    const fallbackHeight = 400;
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !elements || elements.length === 0) return;
+        if (!canvas) return;
+        let active = true;
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // 1. Find the bounding box of all the shapes to know how big the drawing is
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        elements.forEach((el) => {
-            if (el.isDeleted) return;
-            if (el.x < minX) minX = el.x;
-            if (el.y < minY) minY = el.y;
-            // Rough estimation of width/height for bounds
-            const w = el.width || 100;
-            const h = el.height || 100;
-            if (el.x + w > maxX) maxX = el.x + w;
-            if (el.y + h > maxY) maxY = el.y + h;
-        });
-
-        if (minX === Infinity) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            return; // Nothing to draw
-        }
-
-        minX -= padding;
-        minY -= padding;
-        maxX += padding;
-        maxY += padding;
-
-        const contentWidth = maxX - minX;
-        const contentHeight = maxY - minY;
-
-        // 2. Calculate the zoom scale to make it fit perfectly inside our canvas
-        const scaleX = canvas.width / contentWidth;
-        const scaleY = canvas.height / contentHeight;
-        // Clamp to 1 so small drawings don't blow up huge
-        const scale = Math.min(scaleX, scaleY, 1);
-
-        // 3. Calculate offset to center the drawing
-        const offsetX = (canvas.width / scale - contentWidth) / 2 - minX;
-        const offsetY = (canvas.height / scale - contentHeight) / 2 - minY;
-
-        // 4. Reset, clear, and apply our zoom/pan
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.scale(scale, scale);
-        ctx.translate(offsetX, offsetY);
-
-        // 5. Paint the elements
-        elements.forEach((el) => {
-            if (!el.isDeleted) {
-                renderElement(ctx, el as NoteboardElement);
+        const fallbackCssDimension = (value: number | string, fallback: number) => {
+            if (typeof value === 'number' && Number.isFinite(value)) return value;
+            if (typeof value === 'string' && value.trim().endsWith('px')) {
+                const parsed = Number.parseFloat(value);
+                if (Number.isFinite(parsed)) return parsed;
             }
-        });
-    }, [elements, padding]);
+            return fallback;
+        };
+
+        const paint = () => {
+            if (!active) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            const cssWidth = canvas.clientWidth || fallbackCssDimension(width, fallbackWidth);
+            const cssHeight = canvas.clientHeight || fallbackCssDimension(height, fallbackHeight);
+            const dpr = window.devicePixelRatio || 1;
+            const backingWidth = Math.max(1, Math.round(cssWidth * dpr));
+            const backingHeight = Math.max(1, Math.round(cssHeight * dpr));
+
+            if (canvas.width !== backingWidth) canvas.width = backingWidth;
+            if (canvas.height !== backingHeight) canvas.height = backingHeight;
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const activeElements = elements.filter((element) => !element.isDeleted);
+            if (activeElements.length === 0) return;
+
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            for (const element of activeElements) {
+                const [x1, y1, x2, y2] = getElementBounds(element);
+                minX = Math.min(minX, x1);
+                minY = Math.min(minY, y1);
+                maxX = Math.max(maxX, x2);
+                maxY = Math.max(maxY, y2);
+            }
+
+            minX -= padding;
+            minY -= padding;
+            maxX += padding;
+            maxY += padding;
+
+            const contentWidth = Math.max(maxX - minX, 1);
+            const contentHeight = Math.max(maxY - minY, 1);
+            const scale = Math.min(cssWidth / contentWidth, cssHeight / contentHeight, 1);
+            const offsetX = (cssWidth / scale - contentWidth) / 2 - minX;
+            const offsetY = (cssHeight / scale - contentHeight) / 2 - minY;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.scale(scale, scale);
+            ctx.translate(offsetX, offsetY);
+
+            for (const element of activeElements) {
+                renderElement(ctx, element, false, paint);
+            }
+        };
+
+        paint();
+
+        const observer = typeof ResizeObserver === 'undefined'
+            ? null
+            : new ResizeObserver(paint);
+        observer?.observe(canvas);
+        return () => {
+            active = false;
+            observer?.disconnect();
+        };
+    }, [elements, height, padding, width]);
 
     return (
         <canvas
             ref={canvasRef}
-            width={internalWidth}
-            height={internalHeight}
+            width={fallbackWidth}
+            height={fallbackHeight}
             className={className}
             style={{
                 width,

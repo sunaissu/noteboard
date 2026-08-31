@@ -57,7 +57,7 @@ export interface NoteboardRef {
 export interface NoteboardProps {
     slots?: ToolSlot[];
     toolbarPosition?: ToolbarPosition;
-    /** Where the properties panel appears (default: 'top-right') */
+    /** Canvas edge where the properties panel appears (default: 'left') */
     propertiesPosition?: PropertiesPosition;
     onToolSelect?: (tool: Tool) => void;
     activeTool?: Tool;

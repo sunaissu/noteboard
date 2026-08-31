@@ -4,9 +4,10 @@ import type { Tool, ToolSlot } from '../types';
 export function useToolbarShortcuts(
     slots: ToolSlot[],
     onToolSelect?: (tool: Tool) => void,
+    enabled = true,
 ) {
     useEffect(() => {
-        if (!onToolSelect) return;
+        if (!onToolSelect || !enabled) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             const tag = (e.target as HTMLElement)?.tagName;
@@ -31,5 +32,5 @@ export function useToolbarShortcuts(
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [slots, onToolSelect]);
+    }, [enabled, slots, onToolSelect]);
 }
