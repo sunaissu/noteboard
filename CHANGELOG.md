@@ -8,6 +8,10 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+---
+
+## [2.0.1] — 2026-09-04
+
 ### Fixed
 
 - **Collaborative pan feedback loop** — Controlled viewport updates and local Yjs transactions no longer echo back into an actively panning canvas, preventing connected diagrams from flickering indefinitely between stale and current positions.
@@ -15,8 +19,6 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - **Strict board imports** — JSON hydration now validates element counts, IDs, geometry, drawing points, connector bindings, renderer-facing styles, embedded image data, and viewport values before applying current defaults.
 - **Preview and image rendering** — Previews track their rendered size and device-pixel ratio, use accurate rotated/linear bounds, clear empty snapshots, repaint after image settlement, and avoid cross-board image-cache collisions and active-cache thrashing.
 - **Read-only navigation and shortcut scope** — View-only boards support drag panning, while global keyboard and paste handlers run only for the focused board without stealing focus from inline editors.
-
----
 
 ## [2.0.0] — 2026-08-26
 
