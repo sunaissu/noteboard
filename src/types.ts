@@ -34,6 +34,8 @@ export interface ToolbarConfig {
 export interface NoteboardRef {
     /** Returns the live elements array at the time of the call */
     getElements(): NoteboardElement[];
+    /** Read navigation without cloning board elements. */
+    getViewport(): NoteboardViewport;
     /** Select and frame specific objects without changing their content. */
     focusElements(ids: string[]): void;
     /**

@@ -382,6 +382,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             });
             setZoom(nextZoom);
         },
+        getViewport() { return { panX: panOffset.x, panY: panOffset.y, zoom }; },
         getSession() {
             return serializeBoard(
                 elements,

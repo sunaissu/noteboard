@@ -322,3 +322,5 @@ props still come from the host's already validated authoritative state.
 `maxImageBytes` limits each uploaded file; it does not limit the total board.
 For a 1 MiB backend limit, reserve space for session metadata when checking
 `new TextEncoder().encode(JSON.stringify({ elements: next, viewport })).length`.
+
+Use `ref.current.getViewport()` to read `{ panX, panY, zoom }` for presence overlays. It returns a fresh navigation object without cloning board elements; `getSession()` still returns the full export snapshot. Host applications should keep each participant's viewport local unless following is explicitly requested.
