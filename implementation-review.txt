@@ -229,3 +229,6 @@ Validated at 320, 390, 768 and 1440 pixels in Chrome with qa/ui-layout-review.cj
 
 Final package review — 12 October 2026
 Removed implementation-plan.txt and preserved unfinished contracts in feature-backlog.txt. The backlog is not a release completion claim. Regression suites and playground production builds were repeated before the local commit. No npm publication or deployment was performed.
+
+12 October 2026 completion follow-up
+Added acceptElementsChange host admission before local publication. The public-component regression rejects an oversized change, retains the previous board and accepts later valid edits. All 57 tests and the playground production build pass. Root dependency audit reports zero findings.

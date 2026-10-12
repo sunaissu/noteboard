@@ -310,3 +310,15 @@ Asynchronous image exports reject after 15 seconds if an image has not loaded. S
 The Yjs adapter validates peer records before rendering. Invalid records and records whose IDs disagree with their map keys stay in the shared document but are excluded from the view until repaired. The view is limited to 10000 valid objects. These checks do not authorize peer writes or limit the size of incoming Yjs updates: enforce permissions, document/update quotas and persistence limits in the host. Direct controlled element props are trusted application input; validate external snapshots with `deserializeBoard`.
 
 Rough strokes cap interpolation work independently of coordinate distance, with a shared budget per polyline. Shape-label wrapping measures words once instead of repeatedly measuring a growing line. These bounds prevent the reproduced amplification cases; they are not a general large-board performance guarantee.
+
+### Host storage admission
+
+Use `acceptElementsChange(next, previous)` to enforce a host's serialized storage
+budget before a local change reaches the board state or `onElementsChange`.
+Return false and show a host error when the change is too large. Keep this
+callback synchronous and pure apart from reporting that error. Remote controlled
+props still come from the host's already validated authoritative state.
+
+`maxImageBytes` limits each uploaded file; it does not limit the total board.
+For a 1 MiB backend limit, reserve space for session metadata when checking
+`new TextEncoder().encode(JSON.stringify({ elements: next, viewport })).length`.

@@ -341,3 +341,24 @@ test('pen draft retains pressure and negative-coordinate bounds',t=>{
  canvas.props.onPointerMove({clientX:80,clientY:90,pressure:.7});canvas.props.onPointerMove({clientX:130,clientY:140,pressure:.9});canvas.props.onPointerUp();});
  const pen=ref.current.getElements()[0];assert.equal(pen.width,50);assert.equal(pen.height,50);assert.deepEqual(pen.points.map(p=>p.pressure),[.2,.7,.9]);
 });
+
+
+test('host admission rejects a board change before publication and keeps valid edits working', t => {
+    const restoreDom = installDomStubs();
+    const boardRef = React.createRef();
+    const changes = [];
+    let renderer;
+    t.after(() => { if (renderer) act(() => renderer.unmount()); restoreDom(); });
+    act(() => { renderer = create(React.createElement(Noteboard, {
+        ref: boardRef, theme: 'light', acceptElementsChange: elements => elements.length <= 1,
+        onElementsChange: elements => changes.push(elements),
+    }), { createNodeMock }); });
+    const first = createElement('rectangle', 0, 0), second = createElement('ellipse', 20, 20);
+    act(() => boardRef.current.setElements([first]));
+    act(() => boardRef.current.setElements([first, second]));
+    assert.deepEqual(boardRef.current.getElements().map(e => e.id), [first.id]);
+    assert.equal(changes.length, 1);
+    act(() => boardRef.current.setElements([]));
+    assert.equal(boardRef.current.getElements().length, 0);
+    assert.equal(changes.length, 2);
+});

@@ -65,6 +65,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         viewport: externalViewport,
         elements: externalElements,
         onElementsChange,
+        acceptElementsChange,
         onSave,
         boardId,
         threadId,
@@ -273,6 +274,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         externalViewport,
         externalElements,
         onElementsChange,
+        acceptElementsChange,
         onViewportChange,
         onImagePaste: file => { imageInsertPosRef.current = null; pasteImageRef.current(file); },
         onImageInsertRequest: useCallback((x: number, y: number) => {

@@ -130,6 +130,8 @@ export interface NoteboardProps {
      * Use this to broadcast changes via WebSocket or debounce-save to your DB.
      */
     onElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => void;
+    /** Optional synchronous host admission before local state or collaboration changes. Return false to retain the previous board. */
+    acceptElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => boolean;
     /**
      * Fires when the user clicks the Save button (only shown when this prop is provided).
      * Receives a fully serialized NoteboardSession ready to store in a DB.

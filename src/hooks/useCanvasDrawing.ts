@@ -91,6 +91,7 @@ interface UseCanvasDrawingOptions {
      * Wire this to your WebSocket broadcast or DB auto-save.
      */
     onElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => void;
+    acceptElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => boolean;
     /** Called after every pan or zoom. */
     onViewportChange?: (viewport: NoteboardViewport) => void;
     /** Whether snap-to-grid is enabled (controlled externally). */
@@ -111,7 +112,7 @@ export function useCanvasDrawing({
     activeTool, width, height, canvasBg, strokeColor,
     primaryColor = SELECTION_COLOR, primaryOverlay = MARQUEE_FILL, isDark, readOnly = false,
     keyboardEnabled = true, history: externalHistory,
-    initialElements, initialViewport, externalElements, externalViewport, onElementsChange,
+    initialElements, initialViewport, externalElements, externalViewport, onElementsChange, acceptElementsChange,
     onViewportChange,
     snapEnabled = false, showGrid = false, onImageInsertRequest, onImagePaste,
 }: UseCanvasDrawingOptions) {
@@ -145,6 +146,8 @@ export function useCanvasDrawing({
 
     const onImagePasteRef = useRef(onImagePaste);
     onImagePasteRef.current = onImagePaste;
+    const acceptElementsChangeRef = useRef(acceptElementsChange);
+    acceptElementsChangeRef.current = acceptElementsChange;
     const onElementsChangeRef = useRef(onElementsChange);
     onElementsChangeRef.current = onElementsChange;
 
@@ -157,6 +160,7 @@ export function useCanvasDrawing({
             const candidate = typeof updater === 'function' ? updater(previous) : updater;
             const next = updateBoundElements(candidate);
             if (next === previous) return;
+            if (acceptElementsChangeRef.current?.(next, previous) === false) return;
 
             elementsRef.current = next;
             setElementsRaw(next);
