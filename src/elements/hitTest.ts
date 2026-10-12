@@ -2,8 +2,6 @@ import type { Point, NoteboardElement } from './types';
 import { rotatePoint, getElementBounds } from './bounds';
 import { getCalloutGeometry } from './calloutGeometry';
 
-// ─── Geometry Helpers ────────────────────────────────────────
-
 /** Shortest distance from point P to the line segment AB. */
 export function distanceToLineSegment(
     p: Point,
@@ -27,9 +25,6 @@ export function distanceToLineSegment(
     const projY = a.y + t * dy;
     return Math.hypot(p.x - projX, p.y - projY);
 }
-
-// ─── Per-type Hit Tests ──────────────────────────────────────
-
 function hitTestRectangle(
     point: Point,
     element: NoteboardElement,
@@ -233,9 +228,6 @@ function hitTestText(
         point.y <= bounds[3] + threshold
     );
 }
-
-// ─── Main Dispatcher ─────────────────────────────────────────
-
 /**
  * Test whether a screen-space `point` hits `element`.
  * `threshold` is the pixel tolerance (typically half of strokeWidth + 4–10px).
@@ -281,9 +273,6 @@ export function hitTestElement(
             return false;
     }
 }
-
-// ─── Multi-element Selection ─────────────────────────────────
-
 /**
  * Return all elements whose bounding boxes overlap the given
  * selection rectangle (marquee selection).

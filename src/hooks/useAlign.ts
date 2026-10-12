@@ -11,8 +11,6 @@ function getBounds(el: NoteboardElement) {
     return { x1: b[0], y1: b[1], x2: b[2], y2: b[3], cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2 };
 }
 
-// ─── Align ───────────────────────────────────────────────────
-
 export function alignLeft(elements: NoteboardElement[], ids: Set<string>): NoteboardElement[] {
     const sel = elements.filter(e => ids.has(e.id) && !e.isDeleted);
     if (sel.length < 2) return elements;
@@ -82,8 +80,6 @@ export function alignCenterV(elements: NoteboardElement[], ids: Set<string>): No
         return { ...e, y: e.y + (midY - b.cy) };
     });
 }
-
-// ─── Distribute ───────────────────────────────────────────────
 
 export function distributeH(elements: NoteboardElement[], ids: Set<string>): NoteboardElement[] {
     const sel = elements.filter(e => ids.has(e.id) && !e.isDeleted);

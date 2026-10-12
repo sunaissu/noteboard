@@ -3,13 +3,14 @@ import { useNoteboardTheme } from '../ThemeContext';
 
 interface ZoomHUDProps {
     zoom: number;
+    bottom?: number;
     onZoomIn: () => void;
     onZoomOut: () => void;
     onReset: () => void;
     onFitAll: () => void;
 }
 
-export function ZoomHUD({ zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHUDProps) {
+export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHUDProps) {
     const theme = useNoteboardTheme();
     const pct = Math.round(zoom * 100);
 
@@ -40,7 +41,7 @@ export function ZoomHUD({ zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHU
         <div
             style={{
                 position: 'absolute',
-                bottom: 56,
+                bottom,
                 right: 12,
                 zIndex: 1000,
                 display: 'flex',
@@ -57,10 +58,10 @@ export function ZoomHUD({ zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHU
             }}
             onPointerDown={(e) => e.stopPropagation()}
         >
-            <button style={btn} onClick={onZoomOut} title="Zoom out (Ctrl+−)"
+            <button type="button" style={btn} onClick={onZoomOut} title="Zoom out (Ctrl+−)"
                 onMouseEnter={e => hoverStyle(e, true)} onMouseLeave={e => hoverStyle(e, false)}>−</button>
 
-            <button
+            <button type="button"
                 onClick={onReset}
                 title="Reset zoom to 100%"
                 onMouseEnter={e => hoverStyle(e, true)}
@@ -78,12 +79,12 @@ export function ZoomHUD({ zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHU
                 {pct}%
             </button>
 
-            <button style={btn} onClick={onZoomIn} title="Zoom in (Ctrl++)"
+            <button type="button" style={btn} onClick={onZoomIn} title="Zoom in (Ctrl++)"
                 onMouseEnter={e => hoverStyle(e, true)} onMouseLeave={e => hoverStyle(e, false)}>+</button>
 
             <div style={{ width: 1, height: 16, background: theme.panelBorder, margin: '0 2px' }} />
 
-            <button
+            <button type="button"
                 style={{ ...btn, fontSize: 11, width: 'auto', padding: '0 4px' }}
                 onClick={onFitAll}
                 title="Fit all elements (Ctrl+0)"

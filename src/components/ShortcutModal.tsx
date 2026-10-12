@@ -109,7 +109,7 @@ export function ShortcutModal({ open, onClose }: ShortcutModalProps) {
                     <span style={{ fontSize: 16, fontWeight: 700, color: theme.panelTextColor }}>
                         ⌨️ Keyboard Shortcuts
                     </span>
-                    <button
+                    <button type="button"
                         onClick={onClose}
                         style={{
                             background: 'none', border: 'none', cursor: 'pointer',

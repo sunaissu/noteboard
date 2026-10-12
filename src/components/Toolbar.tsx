@@ -7,6 +7,8 @@ export interface ToolbarProps {
     slots: ToolSlot[];
     position?: ToolbarPosition;
     propertiesPosition?: PropertiesPosition;
+    /** Distance from the board edge when another panel occupies that edge. */
+    edgeOffset?: number;
     activeTool?: Tool;
     onToolSelect?: (tool: Tool) => void;
     activeShape?: ShapeVariant;
@@ -24,6 +26,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     slots,
     position = 'bottom',
     propertiesPosition,
+    edgeOffset,
     activeTool,
     onToolSelect,
     activeShape = 'rectangle',
@@ -38,12 +41,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     const sortedSlots = [...slots].sort((a, b) => a.position - b.position);
 
     return (
-        <div style={wrapperStyle(position, propertiesPosition)}>
+        <div style={wrapperStyle(position, propertiesPosition, edgeOffset)}>
             <div
+                data-noteboard-toolbar
                 style={{
                     display: 'flex',
                     flexDirection: isVertical ? 'column' : 'row',
                     gap: 2,
+                    maxWidth: 'calc(100% - 24px)', maxHeight: 'calc(100% - 24px)',
+                    flexWrap: isVertical ? 'nowrap' : 'wrap', justifyContent: 'center', overflow: 'auto',
+                    overscrollBehavior: 'contain',
                     padding: 4,
                     borderRadius: 10,
                     background: theme.toolbarBg,
@@ -55,7 +62,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 {/* Undo / Redo buttons */}
                 {(onUndo || onRedo) && (
                     <>
-                        <button
+                        <button type="button"
                             onClick={onUndo}
                             disabled={!canUndo}
                             title="Undo (Ctrl+Z)"
@@ -73,7 +80,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         >
                             ↩
                         </button>
-                        <button
+                        <button type="button"
                             onClick={onRedo}
                             disabled={!canRedo}
                             title="Redo (Ctrl+Shift+Z)"
@@ -108,7 +115,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     const clickTool = isShapeSlot ? activeShape : slot.toolId;
 
                     return (
-                        <button
+                        <button type="button"
                             key={slot.position}
                             onClick={() => onToolSelect?.(clickTool)}
                             title={`${def.label} (${positionToKey(slot.position)})`}
@@ -160,7 +167,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     );
 };
 
-const wrapperStyle = (position: ToolbarPosition, propsPos?: PropertiesPosition): React.CSSProperties => {
+const wrapperStyle = (position: ToolbarPosition, propsPos?: PropertiesPosition, edgeOffset?: number): React.CSSProperties => {
     const base: React.CSSProperties = {
         position: 'absolute',
         display: 'flex',
@@ -170,11 +177,11 @@ const wrapperStyle = (position: ToolbarPosition, propsPos?: PropertiesPosition):
     // When sharing the same edge with the properties panel, push toolbar
     // inward so the properties panel can sit on the outer edge.
     const sameEdge = propsPos === position;
-    const offset = sameEdge ? 60 : 12;
+    const offset = edgeOffset ?? (sameEdge ? 60 : 12);
 
     switch (position) {
         case 'top':
-            return { ...base, top: offset, left: 0, right: 0, justifyContent: 'center' };
+            return { ...base, top: offset, left: 0, right: 48, justifyContent: 'center' };
         case 'bottom':
             return { ...base, bottom: offset, left: 0, right: 0, justifyContent: 'center' };
         case 'left':

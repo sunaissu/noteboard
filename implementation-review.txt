@@ -1,0 +1,231 @@
+Noteboard implementation review
+11 October 2026
+
+Top, bottom, left, and right properties now render the same shared sections. Chrome compared their actual button/input/select inventories for a mixed selection. Horizontal panels scroll and adapt to narrow widths. The mobile zoom control no longer overlaps the wrapped bottom toolbar.
+
+Shared labels now use Y.Text, active typing publishes before blur, stale updates preserve peer objects and unrelated fields, and supplied collaborative history scopes undo to local edits. Navigation is local by default. Added object search, a board overview, session viewpoints, clean region-aware exports, shared upload/paste admission checks, text recovery notices, and keyboard context menus.
+
+Validation: npm test passes 42 tests; type check, CJS/ESM/type builds, playground build, and package dry-run pass. Runtime npm audit reports 0 vulnerabilities. Chrome checks cover panel parity, live text, peer caret shifts, viewport-independent exports, selected exports, search, embedded context menus, rejected image paste, deleted-object draft recovery, and light/dark desktop/mobile layouts.
+
+Release status: do not roll this out as an uncoordinated patch to existing shared boards. The text schema and default navigation behavior changed. Back up and migrate the authoritative Yjs document with migrateNoteboardText, persist it, and admit only updated clients. Pass binding.history to enable scoped collaborative undo. Package versions were not changed and no npm release or host deployment was performed.
+
+Limits: local tests simulate peers and disconnected replicas; the production provider, persistence layer, account/session presence, and multi-device reconnect behavior were not tested. Browser QA uses headless Chrome, not a Safari/Firefox or physical touch/IME matrix.
+
+Feature backlog status
+
+NBD-01 [P1; pass 1] A minimap and saved viewpoints for navigating large boards.
+  PARTIAL — overview and session viewpoints; persistence is not provided.
+
+NBD-02 [P1; pass 1] A searchable object/layer panel with rename, visibility toggles, and keyboard selection. Grouping, locking, and z-order already exist.
+  PARTIAL — search and object selection; rename and visibility controls remain.
+
+NBD-03 [P1; pass 1] Text search that zooms to matching labels, sticky notes, and callouts.
+  IMPLEMENTED — search text/type/id and focus matching objects.
+
+NBD-04 [P1; pass 1] Reusable board templates for flowcharts, planning, and brainstorming.
+  PARTIAL — three built-in templates and history-aware playground insertion; versioned custom catalogs remain.
+
+NBD-05 [P2; pass 1] A personal symbol library that saves a selected group and inserts new instances.
+  OPEN — not implemented in this change.
+
+NBD-06 [P1; pass 1] SVG and PDF export with selectable region, page size, and scale. PNG/JPEG and JSON export already exist.
+  OPEN — raster export was improved; SVG and PDF export are not implemented.
+
+NBD-07 [P1; pass 1] Live collaborator cursors and selection outlines via a host awareness adapter. The Yjs content adapter already exists.
+  OPEN — not implemented in this change.
+
+NBD-08 [P1; pass 1] Comments pinned to elements or positions, with threads and resolution state.
+  OPEN — not implemented in this change.
+
+NBD-09 [P2; pass 1] A presentation mode that advances through saved viewpoints and can follow a presenter.
+  OPEN — not implemented in this change.
+
+NBD-10 [P2; pass 1] A temporary laser pointer that disappears without modifying the board.
+  OPEN — not implemented in this change.
+
+NBD-11 [P2; pass 1] Automatic flowchart or mind-map layout for connected elements.
+  OPEN — not implemented in this change.
+
+NBD-12 [P2; pass 1] Obstacle-aware connector routing that avoids shapes. Straight, curved, and orthogonal line modes already exist.
+  OPEN — not implemented in this change.
+
+NBD-13 [P1; pass 1] Clickable element links and deep links to specific board objects.
+  OPEN — not implemented in this change.
+
+NBD-14 [P2; pass 1] Image crop and masking controls inside the board.
+  OPEN — not implemented in this change.
+
+NBD-15 [P2; pass 1] Custom connection ports with names and allowed connection types for structured diagrams.
+  OPEN — not implemented in this change.
+
+NBD-16 [P1; pass 2] Keyboard-first object navigation and an accessible outline of shapes, labels, and connections.
+  PARTIAL — keyboard-operable search results and context menus; full canvas keyboard navigation remains.
+
+NBD-17 [P2; pass 2] Selection bookmarks that save a useful group of objects without permanently grouping them.
+  OPEN — not implemented in this change.
+
+NBD-18 [P2; pass 2] Diagram import from structured text or a simple CSV relationship list, with a preview before insertion.
+  OPEN — not implemented in this change.
+
+NBD-19 [P2; pass 2] A host-integrated version browser with named snapshots, added/changed/deleted object comparisons, and restore previews, separate from in-session undo.
+  OPEN — not implemented in this change.
+
+NBD-20 [P2; pass 2] Sticky-note voting with a configurable vote limit and a host-controlled result reveal.
+  OPEN — not implemented in this change.
+
+NBD-21 [P2; pass 2] A shared workshop timer with pause/resume and optional prompts.
+  OPEN — not implemented in this change.
+
+NBD-22 [P3; pass 2] Freehand-to-shape conversion that suggests a rectangle, ellipse, or line and asks before replacing the stroke.
+  OPEN — not implemented in this change.
+
+NBD-23 [P1; pass 3] Linked document excerpt cards with source navigation and stale-content indicators, supplied by the host app.
+  OPEN — not implemented in this change.
+
+NBD-24 [P1; pass 3] Editable calculation objects with formula, variables, and recalculation controls, instead of pasted result text.
+  OPEN — not implemented in this change.
+
+NBD-25 [P2; pass 3] Workspace style presets that apply consistent text/shape formatting to selected objects and can be reused on other boards.
+  OPEN — not implemented in this change.
+
+NBD-26 [P2; pass 3] A host media-picker interface for reusing existing attachments without embedding duplicate image data in every board.
+  OPEN — not implemented in this change.
+
+Detailed audit status
+
+NBD-R01 [USER; P1] Investigate the reported shared-cursor experience
+  PARTIAL — concurrent-label/caret scenarios pass locally; the reported deployed two-user session was not connected or reproduced end-to-end.
+
+NBD-R02 [CODE; P1] Concurrent text editing replaces whole strings
+  IMPLEMENTED — shared text uses Y.Text and stale edits rebase.
+
+NBD-R03 [CODE; P1] Active typing is absent from shared state until commit
+  IMPLEMENTED — text publishes on input, with composition protected.
+
+NBD-R04 [RISK; P1] A stale board snapshot can delete a remote object
+  IMPLEMENTED — unseen peer objects are not deleted by stale snapshots.
+
+NBD-R05 [RISK; P1] Stale edits can restore old properties and reorder remote work
+  IMPLEMENTED for stale snapshot preservation — unchanged fields and unchanged relative order are retained. Insert/delete/move operations update affected Y.Array entries; same-object concurrent move semantics remain Yjs ordering.
+
+NBD-R06 [CODE; P1] Undo replays an entire board snapshot
+  IMPLEMENTED — supplied collaborative history tracks local transactions.
+
+NBD-R07 [CODE; P1] A remote deletion silently discards the active text edit
+  IMPLEMENTED — deletion/lock during editing retains text in a recovery notice when editing attempts to commit.
+
+NBD-R08 [RISK; P2] A newly locked object can still be resized by an active drag
+  IMPLEMENTED — ongoing single-element resize rechecks locking.
+
+NBD-R09 [CODE; P2] Resizing pen strokes removes pressure values
+  IMPLEMENTED — resized pen points retain pressure.
+
+NBD-R10 [CODE; P2] Text bounds ignore some text styles
+  PARTIAL — text commit measures font weight/style and line height; every geometry-changing property path is not certified.
+
+NBD-R11 [CODE; P2] The text editor overlay loses object geometry
+  PARTIAL — overlay follows object position/angle and standalone alignment; rotated multiline/shape alignment needs a broader browser matrix.
+
+NBD-R12 [CODE; P2] Current raster export captures the display canvas
+  IMPLEMENTED — dedicated content export is independent of viewport, grid, and selection overlays.
+
+NBD-R13 [CODE; P2] JPEG output differs between the toolbar and public API
+  IMPLEMENTED — toolbar and public API use the same JPEG background path.
+
+NBD-R14 [CODE; P2] Context menus are positioned using the wrong coordinate space
+  IMPLEMENTED — container-relative, clamped context menus.
+
+NBD-R15 [CODE; P2] Shape shortcuts also respond to modified browser commands
+  IMPLEMENTED — modified/composing shortcut keys do not select shapes.
+
+NBD-R16 [RISK; P2] Async image and JSON import can outlive edit permission
+  IMPLEMENTED — image/JSON callbacks check current permission and import generation.
+
+NBD-R17 [GAP; P1] Image insertion needs admission checks and visible failure handling
+  IMPLEMENTED — uploads/pastes share format, byte, and decoded-pixel limits plus visible failure messages.
+
+NBD-R18 [RISK; P2] Large boards and long pen strokes have expensive update paths
+  PARTIAL — canvas buffers resize only when dimensions change; pen drawing uses incremental bounds and a private draft array, capped at 100,000 points. Linear bounds and pen resizing avoid large temporary arrays and argument spreading. A full large-board performance budget remains open.
+
+NBD-R19 [GAP; P1] Each collaborator needs an independent view by default
+  IMPLEMENTED — local viewport by default; shared navigation is explicit.
+
+NBD-R20 [GAP; P1] Recoverable active drafts and a real cancel-edit action
+  PARTIAL — live state plus recoverable draft notice; no durable draft queue or cancel-and-revert action.
+
+NBD-R21 [GAP; P2] Touch navigation and stylus-specific controls
+  OPEN — multi-touch navigation and stylus-specific controls remain.
+
+NBD-R22 [GAP; P2] Interoperable clipboard import and export
+  OPEN — interoperable external clipboard formats remain.
+
+NBD-R23 [GAP; P1] A history-aware host mutation API
+  IMPLEMENTED — imperative element replacement records history and honors read-only mode.
+
+NBD-R24 [GAP; P2] Keyboard-operable context menus
+  IMPLEMENTED — context-menu focus, arrows, Home/End, and Escape.
+
+NBD-R25 [GAP; P2] Safe import preview with merge or replace choices
+  PARTIAL — playground adds validated preview and merge/replace with undo; the package Settings import still uses confirmation and replacement.
+
+NBD-R26 [GAP; P2] Session-based editing presence and collision hints
+  OPEN — session presence and collision hints remain host integration work.
+
+Review evidence
+
+The original findings and research remain in ../project-feature-backlog.txt. Browser runner: ../noteboard/qa/review.cjs. Local preview fixture: ../noteboard/tests/browser. Screenshots: ../noteboard/qa/artifacts. Those test artifacts are excluded from npm packages.
+
+The review loop reproduced failures, added regressions, applied focused fixes, and reran affected checks. Open and partial items above remain work; passing checks do not establish that no other bugs or useful features exist.
+
+12 October 2026 follow-up
+
+Reduced canvas-buffer resets, pen-point copying, and bounds allocations; preserved pressure data during resizing. Added regressions for buffer resize behavior, negative pen bounds, and pressure. Removed decorative/stale comments and normalized mixed line endings in modified files.
+
+Root audit: 0 vulnerabilities. Playground audit: 16 findings (11 high, 3 moderate, 2 low) fixed through compatible dependency updates, including Vite 7.3.7; 0 remaining. All 42 tests, package builds, playground build, package dry-run, and Chrome checks pass. The browser fixture now reads current imperative handles and waits for remote deletion to reach the controlled board before checking recovery. The migration and provider/browser limits above still apply. See ../npm-package-review-2026-10-12.txt.
+
+12 October 2026 completion review
+
+This pass updates only locally changed order entries. A stale insertion preserves a peer reorder, concurrent additions do not duplicate unchanged entries, and local reorder undo keeps peer objects. Export, overview and focus bounds avoid unbounded argument spreading; export rejects nonfinite bounds. Concurrent moves of the same object still use Yjs conflict ordering, not a semantic move CRDT.
+
+The full feature contracts, dependencies and completion criteria are in implementation-plan.txt. Existing OPEN/PARTIAL features remain unfinished. Final validation: npm test passes 47 tests, including TypeScript and CJS/ESM/declaration builds. npm run playground:build and npm pack --dry-run --json pass. Package and playground npm audit --json each report zero known vulnerabilities. Git diff --check passes. The tarball includes README.md, implementation-review.txt and implementation-plan.txt; development tests and browser artifacts remain excluded.
+
+Chrome: the shared qa/review.cjs suite passes, including collaboration, table editing, history, export, hostile input and narrow light/dark layouts. qa/completion-review.cjs passes calculator history/Ans/calculus replay, significant figures, preview navigation and source composition guards with no uncaught page errors. These commands run from the sibling noteboard repository against its local tests/browser fixture. Browser instructions are in noteboard/qa/README.txt.
+
+Added .github/workflows/ci.yml for package tests on Node 18/22/24, playground builds on Node 22/24, package dry-runs and dependency audits. The workflows have not executed on GitHub. Local execution used the installed Node runtime, not the complete matrix. Workflow references: https://github.com/actions/checkout and https://github.com/actions/setup-node.
+
+Existing uncommitted changes were retained. No package version, npm publication, deployment or Git commit was made during this review.
+
+12 October 2026 feature and playground review
+
+Added fresh flowchart, planning and brainstorm templates with internal bindings. Fixed pressure loss in exported resizeElement. Rebuilt the playground using the other packages’ page design, with template insertion, JSON preview/merge/replace, PNG/session exports, read-only controls and a fit action that does not select objects. Built-in templates are available; versioned custom template catalogs remain planned.
+
+Validation: package tests pass (calculator 9, document-editor 35, Noteboard 49; 93 total), with TypeScript checks and CJS/ESM/declaration builds. All three playground production builds and npm pack --dry-run --json pass. README and implementation docs are included in the archives. The shared Chrome review.cjs and completion-review.cjs suites pass. New qa/features-review.cjs covers actual playgrounds; qa/upload-review.cjs checks delayed uploads. No uncaught page errors were recorded. Noteboard light/dark desktop and 390-pixel layouts were captured and inspected. Tests use local Chrome, not a cross-browser or hosted-storage matrix.
+
+Implementation plans and README API examples match the current scope. OPEN/PARTIAL items remain unfinished. Dependencies were unchanged in this feature pass; the preceding audit results above apply.
+
+12 October 2026 properties and scrolling investigation
+
+Reproduced the report in a tall host page with real Chrome wheel input: top properties measured 360 CSS pixels; a 300-pixel canvas wheel gesture also moved the page 300 pixels, and repeated panel wheel gestures moved the page 900 pixels. React's delegated wheel listener could not cancel the browser default. The native listener previously cancelled only Ctrl/Command zoom.
+
+Top/bottom panels now use category tabs and horizontal control strips instead of stacking tall property sections. Measured desktop appearance height is about 164 pixels; narrow layouts remain capped at 220. Side inspectors retain vertical scrolling, and the same property fields are available in each orientation. Keyboard tabs use arrows/Home/End and scroll only their own strip. Top controls leave room for Settings. Toolbar offsets and zoom placement use measured panel/toolbar sizes, preventing collisions when panels share an edge or collapse.
+
+A native nonpassive wheel listener cancels canvas default scrolling while preserving React pan/zoom. Nested scrollable controls retain their native scrolling; their edges do not pass wheel input to the page. Horizontal strips map vertical wheel input to horizontal movement. Line/page delta modes and shifted trackpad deltaX are handled. Wheel input outside the board still scrolls the host page, and read-only boards still navigate. This changes wheel behavior, not touch/pinch support.
+
+Validation: npm test passes 50 tests with package type/build checks. qa/interaction-review.cjs passes real wheel checks, read-only navigation, keyboard categories, desktop/mobile bounds, panel collapse and same-edge overlap assertions, with no passive-listener warnings or uncaught page errors. qa/review.cjs passes the existing property-field parity, collaboration, editing and export regressions. npm run playground:build passes. Chrome screenshots in qa/artifacts/properties-compact-* were visually inspected; this is not a physical-device or cross-browser certification.
+
+12 October 2026 security and correctness review loop
+
+Bounded rough rendering and label measurement; tightened imported/uploaded images and decoded pixel limits; added bounded image-export waits with listener cleanup; quarantined malformed peer records without deleting their shared data.
+
+Four passes: reproduce/fix, inspect fixes and adjacent paths, integration boundaries, and final scoped review. The last pass found no additional actionable issues. Calculator 11, document-editor 37 and Noteboard 56 tests pass (104 total), with package type/build checks and all playground builds. Chrome qa/security-review.cjs, qa/review.cjs, qa/upload-review.cjs, qa/interaction-review.cjs and qa/features-review.cjs pass. All six npm dependency audits report zero known vulnerabilities. Package dry runs contain intended runtime/docs only; diff whitespace checks pass.
+
+README documents the resulting behavior and limits. Server authorization and aggregate quotas, browser image decoding, cross-browser/device testing and sustained load remain outside this local review. No publication or Git commit was made. Full workspace evidence: ../npm-security-review-2026-10-12.txt.
+
+12 October 2026 visual spacing review
+
+Adjusted playground inspector padding, label sizes, field spacing and keyboard focus rings. Desktop workspaces fit the viewport and the inspector scrolls independently. The existing compact properties and canvas scroll containment remain unchanged.
+
+Validated at 320, 390, 768 and 1440 pixels in Chrome with qa/ui-layout-review.cjs. Checks cover page overflow, utility-control overlap, image-panel padding, six direct heading actions, preview controls and numerical-option alignment. Light/dark and mobile screenshots were inspected. Existing commands-review.cjs, interaction-review.cjs and features-review.cjs pass. Document-editor npm test passes 37 tests; all three playground production builds pass. Physical touch and other browsers were not tested.
+
+Final package review — 12 October 2026
+Removed implementation-plan.txt and preserved unfinished contracts in feature-backlog.txt. The backlog is not a release completion claim. Regression suites and playground production builds were repeated before the local commit. No npm publication or deployment was performed.

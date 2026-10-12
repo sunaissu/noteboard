@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { CaretDownIcon } from '@phosphor-icons/react';
 import type { NoteboardTheme } from '../../ThemeContext';
+
+export const HorizontalProperties = React.createContext(false);
+
+function propertyFields(children: React.ReactNode): React.ReactNode[] {
+    return React.Children.toArray(children).reduce<React.ReactNode[]>((items, child) => {
+        if (React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === React.Fragment) items.push(...propertyFields(child.props.children));
+        else items.push(child);
+        return items;
+    }, []);
+}
 
 export function SectionLabel({ children, theme }: { children: React.ReactNode; theme: NoteboardTheme }) {
     return (
@@ -29,9 +39,14 @@ export function CollapsibleSection({
     children: React.ReactNode;
 }) {
     const [open, setOpen] = useState(defaultOpen);
+    const horizontal = useContext(HorizontalProperties);
+    if (horizontal) return <div className="noteboard-property-fields" role="group" aria-label={label} style={{ display: 'flex', gap: 16, alignItems: 'start' }}>
+        {propertyFields(children).map((child, index) => <div key={index} style={{ width: 160, flexShrink: 0 }}>{child}</div>)}
+    </div>;
     return (
         <div>
-            <button
+            <button type="button"
+                aria-expanded={open}
                 onClick={() => setOpen((v) => !v)}
                 style={{
                     display: 'flex', alignItems: 'center', width: '100%',
@@ -60,12 +75,14 @@ export function CollapsibleSection({
                     {label}
                 </span>
             </button>
-            {open && children}
+            {open && <div className="noteboard-property-fields">{children}</div>}
         </div>
     );
 }
 
 export function Divider({ theme }: { theme: NoteboardTheme }) {
+    const horizontal = useContext(HorizontalProperties);
+    if (horizontal) return null;
     return <div style={{ height: 1, background: `${theme.panelMutedColor}22`, margin: '8px 0 12px' }} />;
 }
 
@@ -92,7 +109,7 @@ export function ColorRow({
             </div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                 {swatches.map((c) => (
-                    <button
+                    <button type="button"
                         key={c}
                         onClick={() => onChange(c)}
                         title={c}
@@ -151,7 +168,7 @@ export function ChoiceRow<T extends string>({
             </div>
             <div style={{ display: 'flex', gap: 2 }}>
                 {options.map((opt) => (
-                    <button
+                    <button type="button"
                         key={opt.value}
                         onClick={() => onChange(opt.value)}
                         style={{
@@ -226,7 +243,7 @@ export function ToggleRow({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             {icon}
             <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500, flex: 1 }}>{label}</span>
-            <button
+            <button type="button"
                 onClick={() => onChange(!checked)}
                 style={{
                     width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',

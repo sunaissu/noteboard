@@ -43,7 +43,9 @@
     "dist",
     "CHANGELOG.md",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "implementation-review.txt",
+    "feature-backlog.txt"
   ],
   "scripts": {
     "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@playwright/test": "^1.64.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "react": "^18.2.0",

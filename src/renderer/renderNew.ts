@@ -4,8 +4,6 @@
  */
 import type { StickyNoteElement, FrameElement, StarElement, CalloutElement } from '../elements/types';
 import { getCalloutGeometry } from '../elements/calloutGeometry';
-
-// ─── Compat helper: rounded rect path (polyfills ctx.roundRect) ─────
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     const minR = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -20,8 +18,6 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
     ctx.quadraticCurveTo(x, y, x + minR, y);
     ctx.closePath();
 }
-
-// ─── Sticky Note ─────────────────────────────────────────────
 
 const NOTE_PALETTE: Record<string, { bg: string; stroke: string; fold: string }> = {
     yellow: { bg: '#ffd60a', stroke: '#c8a800', fold: '#c8a800' },
@@ -83,8 +79,6 @@ export function renderStickyNote(ctx: CanvasRenderingContext2D, el: StickyNoteEl
     ctx.restore();
 }
 
-// ─── Frame ────────────────────────────────────────────────────
-
 export function renderFrame(ctx: CanvasRenderingContext2D, el: FrameElement) {
     const { x, y, width, height } = el;
     const x1 = Math.min(x, x + width), y1 = Math.min(y, y + height);
@@ -118,8 +112,6 @@ export function renderFrame(ctx: CanvasRenderingContext2D, el: FrameElement) {
 
     ctx.restore();
 }
-
-// ─── Star / Polygon ───────────────────────────────────────────
 
 /** Computes points for a star or regular polygon. All points are world-space. */
 function buildStarPoints(cx: number, cy: number, outerR: number, sides: number, isStar: boolean, innerRatio: number): { x: number; y: number }[] {
@@ -161,8 +153,6 @@ export function renderStar(ctx: CanvasRenderingContext2D, el: StarElement) {
 
     ctx.restore();
 }
-
-// ─── Callout ─────────────────────────────────────────────────
 
 export function renderCallout(ctx: CanvasRenderingContext2D, el: CalloutElement) {
     const { body, tail } = getCalloutGeometry(el);

@@ -4,6 +4,7 @@ import type { NoteboardResolvedTheme, NoteboardThemeMode } from '../ThemeContext
 import { List, X, Moon, Sun, Monitor, FloppyDisk, DownloadSimple, Trash, GridNine, Export, UploadSimple } from '@phosphor-icons/react';
 
 export interface SettingsPanelProps {
+    children?: React.ReactNode;
     themeMode: NoteboardThemeMode;
     resolvedTheme: NoteboardResolvedTheme;
     onThemeChange: (theme: NoteboardThemeMode) => void;
@@ -20,6 +21,7 @@ export interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
+    children,
     themeMode,
     resolvedTheme,
     onThemeChange,
@@ -59,10 +61,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return (
         <>
             {/* Burger menu button */}
-            <button
+            <button type="button"
                 ref={buttonRef}
                 onClick={() => setOpen((v) => !v)}
-                title="Settings"
+                title="Settings" aria-expanded={open}
                 style={{
                     position: 'absolute',
                     top: 12,
@@ -106,6 +108,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     display: 'flex',
                     flexDirection: 'column',
                     pointerEvents: open ? 'auto' : 'none',
+                    visibility: open ? 'visible' : 'hidden',
                     fontFamily: "'Inter', system-ui, sans-serif",
                 }}
             >
@@ -130,7 +133,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     >
                         Menu
                     </span>
-                    <button
+                    <button type="button"
                         onClick={() => setOpen(false)}
                         title="Close"
                         style={{
@@ -159,6 +162,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
                 {/* Panel content */}
                 <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+                    {children}
                     {/* ── View Options ── */}
                     <div
                         style={{
@@ -236,7 +240,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </span>
                             </div>
 
-                            <button
+                            <button type="button"
                                 onClick={onToggleGrid}
                                 role="switch"
                                 aria-checked={showGrid}
@@ -257,7 +261,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                         Keyboard Shortcuts
                                     </span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onShowShortcuts(); }}
                                     style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -283,7 +287,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <FloppyDisk size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                     <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Save Board</span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onSave(); setOpen(false); }}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 12px', border: 'none', borderRadius: 7, cursor: 'pointer', background: theme.primaryColor ?? theme.buttonActiveColor, color: theme.primaryTextColor ?? '#fff', fontSize: 12, fontWeight: 600, transition: 'opacity 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
@@ -301,7 +305,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <DownloadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                     <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Export PNG</span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onExportImage('png'); setOpen(false); }}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
@@ -311,7 +315,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </button>
                             </div>
                         )}
-                        
+
                         {/* Export JPEG */}
                         {onExportImage && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -319,7 +323,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <DownloadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                     <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Export JPEG</span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onExportImage('jpeg'); setOpen(false); }}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
@@ -337,7 +341,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <Export size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                     <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Save to File</span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onExportJSON(); setOpen(false); }}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
@@ -355,7 +359,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     <UploadSimple size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
                                     <span style={{ fontSize: 13, color: theme.panelTextColor, fontWeight: 500 }}>Load from File</span>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => { onImportJSON(); setOpen(false); }}
                                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 12px', border: '1px solid ' + theme.panelBorder.split(' ')[2], borderRadius: 7, cursor: 'pointer', background: 'transparent', color: theme.panelTextColor, fontSize: 12, fontWeight: 600, transition: 'background 0.15s' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.background = theme.buttonHoverBg; }}
@@ -391,7 +395,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                     Clear Canvas
                                 </span>
                             </div>
-                            <button
+                            <button type="button"
                                 onClick={() => {
                                     onClearCanvas();
                                     setOpen(false);

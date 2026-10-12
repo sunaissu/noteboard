@@ -29,3 +29,8 @@ export type {
     NoteboardProps,
     NoteboardRef,
 } from './types';
+
+export { exportBoardImage, renderBoardImage } from './exportImage';
+export type { BoardImageOptions } from './exportImage';
+export { createBoardTemplate } from './templates';
+export type { BoardTemplate } from './templates';

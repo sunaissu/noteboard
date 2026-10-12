@@ -104,7 +104,7 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                 const keyLabel = SHAPE_KEY_LABELS[shape];
 
                 return (
-                    <button
+                    <button type="button"
                         key={shape}
                         onClick={() => onSelectShape(shape)}
                         title={keyLabel ? `${def.label} (${keyLabel})` : def.label}

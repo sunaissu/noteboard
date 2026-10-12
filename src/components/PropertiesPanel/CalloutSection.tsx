@@ -36,7 +36,7 @@ export function CalloutSection({ selectedElements, onUpdate }: Props) {
             <CollapsibleSection label="Tail Direction" theme={theme}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 12 }}>
                 {TAIL_OPTIONS.map((opt) => (
-                    <button
+                    <button type="button"
                         key={opt.key}
                         title={opt.key}
                         style={btnStyle(tailDir === opt.key)}

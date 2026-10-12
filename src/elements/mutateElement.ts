@@ -1,9 +1,6 @@
 import type { Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
 import { generateId } from './createElement';
-
-// ─── Generic Mutation ────────────────────────────────────────
-
 /**
  * Return a shallow copy of `element` with `updates` merged in.
  * This is the low-level immutable helper — all other mutators build on it.
@@ -14,9 +11,6 @@ export function mutateElement<T extends NoteboardElement>(
 ): T {
     return { ...element, ...updates };
 }
-
-// ─── Translate ───────────────────────────────────────────────
-
 /** Move an element by (dx, dy). */
 export function moveElement<T extends NoteboardElement>(
     element: T,
@@ -28,9 +22,6 @@ export function moveElement<T extends NoteboardElement>(
         y: element.y + dy,
     } as Partial<T>);
 }
-
-// ─── Resize ──────────────────────────────────────────────────
-
 /**
  * Scale an element by (scaleX, scaleY) relative to an origin point.
  * For linear elements the internal points are also scaled.
@@ -58,6 +49,7 @@ export function resizeElement<T extends NoteboardElement>(
     if (isLinearElement(element as NoteboardElement)) {
         const linearEl = element as unknown as { points: Point[] };
         base.points = linearEl.points.map((p: Point) => ({
+            ...p,
             x: p.x * scaleX,
             y: p.y * scaleY,
         }));
@@ -65,9 +57,6 @@ export function resizeElement<T extends NoteboardElement>(
 
     return mutateElement(element, base as Partial<T>);
 }
-
-// ─── Rotate ──────────────────────────────────────────────────
-
 /** Set the rotation angle (radians) of an element. */
 export function rotateElement<T extends NoteboardElement>(
     element: T,
@@ -75,9 +64,6 @@ export function rotateElement<T extends NoteboardElement>(
 ): T {
     return mutateElement(element, { angle } as Partial<T>);
 }
-
-// ─── Delete ──────────────────────────────────────────────────
-
 /** Soft-delete an element. */
 export function deleteElement<T extends NoteboardElement>(
     element: T,
@@ -91,9 +77,6 @@ export function restoreElement<T extends NoteboardElement>(
 ): T {
     return mutateElement(element, { isDeleted: false } as Partial<T>);
 }
-
-// ─── Duplicate ───────────────────────────────────────────────
-
 /** Clone an element with a fresh ID and a small positional offset. */
 export function duplicateElement<T extends NoteboardElement>(
     element: T,

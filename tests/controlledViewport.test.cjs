@@ -67,6 +67,10 @@ const createNodeMock = ({ type }) => {
             return false;
         },
         focus() {},
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+        setSelectionRange() {},
+        selectionStart: 0, selectionEnd: 0, selectionDirection: "none",
         getBoundingClientRect() {
             return { bottom: 600, height: 600, left: 0, right: 800, top: 0, width: 800 };
         },
@@ -151,6 +155,30 @@ test('wheel zoom keeps the canvas point under the cursor fixed', (t) => {
     assert.equal(viewport.zoom, 1.1);
     assert.ok(Math.abs(viewport.panX - (-40)) < 1e-9);
     assert.ok(Math.abs(viewport.panY - (-30)) < 1e-9);
+});
+
+test('wheel pan normalizes line and page units and keeps shifted trackpad deltas', (t) => {
+    const restoreDom = installDomStubs();
+    const ref = React.createRef();
+    let renderer;
+    t.after(() => { if (renderer) act(() => renderer.unmount()); restoreDom(); });
+    act(() => { renderer = create(React.createElement(Noteboard, { ref, theme: 'light' }), {
+        createNodeMock: element => ({ ...createNodeMock(element), clientWidth: 800, clientHeight: 600 }),
+    }); });
+    const wheel = event => act(() => renderer.root.findByType('canvas').props.onWheel({
+        deltaX: 0, deltaY: 0, deltaMode: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault() {}, ...event,
+    }));
+    wheel({ deltaY: 3, deltaMode: 1 });
+    assert.equal(ref.current.getSession().viewport.panY, -48);
+    wheel({ deltaX: 1, deltaY: 1, deltaMode: 2 });
+    assert.equal(ref.current.getSession().viewport.panX, -800);
+    assert.equal(ref.current.getSession().viewport.panY, -648);
+    wheel({ deltaX: 24, shiftKey: true });
+    assert.equal(ref.current.getSession().viewport.panX, -824);
+    wheel({ deltaY: 10, shiftKey: true });
+    assert.equal(ref.current.getSession().viewport.panX, -834);
+    wheel({ deltaX: 10, ctrlKey: true });
+    assert.equal(ref.current.getSession().viewport.zoom, 1);
 });
 
 test('read-only boards still support drag panning', (t) => {
@@ -277,4 +305,39 @@ test('context-menu mutations cannot bypass an element lock', (t) => {
         assert.equal(button.props.disabled, true, `${label} should be disabled`);
     }
     assert.equal(boardRef.current.getElements()[0].isDeleted, false);
+});
+
+test('typing into an existing label publishes text before blur', (t) => {
+    const restoreDom = installDomStubs();
+    const boardRef = React.createRef();
+    const shape = createElement('rectangle', { id: 'label', x: 0, y: 0, width: 120, height: 80, text: 'hello' });
+    let renderer;
+    t.after(() => { if (renderer) act(() => renderer.unmount()); restoreDom(); });
+    act(() => { renderer = create(React.createElement(Noteboard, { ref: boardRef, initialElements: [shape], theme: 'light' }), { createNodeMock }); });
+    act(() => renderer.root.findByType('canvas').props.onDoubleClick({ clientX: 40, clientY: 40 }));
+    const textarea = renderer.root.findByType('textarea');
+    act(() => textarea.props.onInput({ currentTarget: { value: 'hello world', style: {}, scrollHeight: 24, scrollWidth: 100 }, nativeEvent: { isComposing: false } }));
+    assert.equal(boardRef.current.getElements()[0].text, 'hello world');
+});
+
+test('repainting reuses canvas storage until its size changes',t=>{
+ const restore=installDomStubs(),ref=React.createRef();let renderer,writes=0;
+ t.after(()=>{if(renderer)act(()=>renderer.unmount());restore();});
+ const mock=element=>{const node=createNodeMock(element);if(element.type==='canvas')for(const key of ['width','height']){let value=0;Object.defineProperty(node,key,{get:()=>value,set:next=>{value=next;writes++;}});}return node;};
+ act(()=>{renderer=create(React.createElement(Noteboard,{ref,theme:'light'}),{createNodeMock:mock});});
+ const initial=writes;
+ act(()=>ref.current.setViewport({panX:20,panY:10,zoom:1.1}));
+ assert.equal(writes,initial);
+ global.window.devicePixelRatio=2;
+ act(()=>ref.current.setViewport({panX:30,panY:10,zoom:1.1}));
+ assert.equal(writes,initial+2);
+});
+test('pen draft retains pressure and negative-coordinate bounds',t=>{
+ const restore=installDomStubs(),ref=React.createRef();let renderer;
+ t.after(()=>{if(renderer)act(()=>renderer.unmount());restore();});
+ act(()=>{renderer=create(React.createElement(Noteboard,{ref,theme:'light',activeTool:'pen'}),{createNodeMock});});
+ const canvas=renderer.root.findByType('canvas');
+ act(()=>{canvas.props.onPointerDown({button:0,clientX:100,clientY:100,isPrimary:true,pointerId:1,pressure:.2});
+ canvas.props.onPointerMove({clientX:80,clientY:90,pressure:.7});canvas.props.onPointerMove({clientX:130,clientY:140,pressure:.9});canvas.props.onPointerUp();});
+ const pen=ref.current.getElements()[0];assert.equal(pen.width,50);assert.equal(pen.height,50);assert.deepEqual(pen.points.map(p=>p.pressure),[.2,.7,.9]);
 });

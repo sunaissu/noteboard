@@ -1,0 +1,233 @@
+noteboard feature backlog
+12 October 2026
+
+Scope and status
+
+This is the implementation contract for all 26 candidate features in this package's existing backlog. OPEN and PARTIAL entries are unfinished work. An implementation plan is not evidence that a feature has shipped. Each entry below gives concrete work, dependencies and acceptance checks. No entry is complete merely because an API type, toolbar button or passing smoke test exists.
+
+Current review
+
+Added editable flowchart, planning and brainstorm templates, fixed pressure loss in the public resize helper, and redesigned the playground to match the other packages. JSON import now previews merge/replace; initial fit changes only the view.
+
+This pass updates only locally changed order entries. A stale insertion preserves a peer reorder, concurrent additions do not duplicate unchanged entries, and local reorder undo keeps peer objects. Export, overview and focus bounds avoid unbounded argument spreading; export rejects nonfinite bounds. Concurrent moves of the same object still use Yjs conflict ordering, not a semantic move CRDT.
+
+Suggested implementation order
+
+1. Finish navigation and accessibility: NBD-01, NBD-02, NBD-16 and NBD-13; maintain NBD-03.
+2. Add reusable content and export: NBD-04, NBD-05, NBD-06, NBD-17, NBD-25 and NBD-26.
+3. Add host collaboration workflows: NBD-07, NBD-08, NBD-09, NBD-10, NBD-19, NBD-20 and NBD-21.
+4. Add diagram and connected-content workflows: NBD-11, NBD-12, NBD-14, NBD-15, NBD-18, NBD-22, NBD-23 and NBD-24.
+
+Package boundaries
+
+The calculator owns mathematical evaluation and versioned calculation definitions. The document editor and Noteboard own their editing, rendering, serialization and undo behavior. The host owns storage, authentication, authorization, synchronization providers and permission-aware resolution of linked content. Cross-package dependencies use the existing CAL/DOC/NBD identifiers. Keep host callbacks optional and report async failures without losing local work.
+
+Definition of done
+
+For each feature, complete the public types, working UI or documented engine API, serialization/migration when needed, history/read-only behavior, error states, README example and the acceptance checks below. Add a regression that fails before a bug fix. Test user outcomes rather than mirroring private helpers. Mark IMPLEMENTED only after the relevant checks pass and list any host prerequisite.
+
+Release checks
+
+Run npm test, npm run playground:build and npm pack --dry-run --json. Inspect CJS, ESM, declaration files and every README-linked package file in the tarball. Run the documented browser suites for changed workflows, including keyboard and narrow light/dark layouts. Audit root and playground dependency trees. Record exact commands and results in implementation-review.txt.
+
+For shared-schema changes, back up authoritative state, document migration and rollback, test old-data import, and prevent incompatible clients from reconnecting. Provider authentication, durable persistence and reconnect behavior require a host integration test; in-memory Yjs tests do not certify them.
+
+Feature contracts
+
+NBD-01 Viewpoints
+Status: PARTIAL
+Dependencies: None.
+Implementation: Keep overview/session bookmarks and add controlled viewpoints plus change callbacks for host persistence.
+Acceptance: Reload preserves named camera positions; invalid zoom is clamped; changing boards cannot reuse another board's viewpoints.
+
+NBD-02 Object panel
+Status: PARTIAL
+Dependencies: None.
+Implementation: Add separate display names, visibility metadata and keyboard operations to the existing search list; update session validation, rendering and hit testing.
+Acceptance: Hidden elements do not render, export or intercept input; locked/read-only objects cannot be renamed; undo restores metadata.
+
+NBD-03 Text search
+Status: IMPLEMENTED
+Dependencies: None.
+Implementation: Existing search and focus are implemented. Bounds aggregation and membership checks now scale without argument spreading.
+Acceptance: Search labels, notes, callouts and IDs; deleted objects are excluded and focus preserves viewport invariants.
+
+NBD-04 Templates
+Status: PARTIAL
+Dependencies: None.
+Implementation: createBoardTemplate provides fresh flowchart, planning and brainstorm objects with rekeyed internal bindings and groups. The playground inserts through history and previews JSON imports with merge/replace. Versioned custom template catalogs and migration remain.
+Acceptance: Unit checks validate snapshots, fresh IDs, origin offsets and internal bindings. Chrome checks repeated insertion/import, merge, read-only, export and responsive layouts.
+
+NBD-05 Symbol library
+Status: OPEN
+Dependencies: NBD-04.
+Implementation: Save selected objects in a host-owned library with normalized bounds, preview and insertion controls.
+Acceptance: External connectors detach, internal connectors remap, asset references resolve, and each insertion is one undo step.
+
+NBD-06 Vector and PDF export
+Status: OPEN
+Dependencies: None.
+Implementation: Build an SVG renderer for each supported shape and a PDF adapter with region, page size, scale and static image handling.
+Acceptance: Compare exported geometry to the canvas, including rotation, text, callouts and connectors; sanitize SVG and enforce resource limits.
+
+NBD-07 Presence
+Status: OPEN
+Dependencies: None.
+Implementation: Add a host awareness adapter for cursor, selection, identity and optional presenter viewport; keep ephemeral data outside board history.
+Acceptance: Disconnect removes peers; camera transforms align cursors; throttling and read-only participation are tested.
+
+NBD-08 Pinned comments
+Status: OPEN
+Dependencies: NBD-07 for identity.
+Implementation: Define host-owned threads anchored to element IDs or world positions and render a comment layer with resolve/reopen actions.
+Acceptance: Moved/deleted targets retain or orphan anchors predictably; permissions, keyboard navigation and host failures are visible.
+
+NBD-09 Presentation
+Status: OPEN
+Dependencies: NBD-01, NBD-07.
+Implementation: Add ordered viewpoints, next/previous controls and explicit follow/unfollow presenter state.
+Acceptance: Local navigation opts out predictably; reconnect does not seize the viewer camera; edit history is unchanged.
+
+NBD-10 Laser pointer
+Status: OPEN
+Dependencies: NBD-07.
+Implementation: Draw time-limited pointer trails in an overlay and optionally broadcast bounded ephemeral samples.
+Acceptance: Trails expire, respect camera transforms, stop on disconnect and never appear in session exports or undo.
+
+NBD-11 Automatic layout
+Status: OPEN
+Dependencies: None.
+Implementation: Translate selected connected objects into a bounded graph and offer flow/mind-map layout previews before applying coordinates.
+Acceptance: Handle cycles, disconnected components and locked objects; bindings follow the new geometry and undo restores the layout.
+
+NBD-12 Connector routing
+Status: OPEN
+Dependencies: None.
+Implementation: Add obstacle-aware orthogonal routing with clearance, deterministic tie-breaking and a bounded search budget.
+Acceptance: Routes avoid shapes, preserve endpoints, update after moves and report a fallback when no route exists.
+
+NBD-13 Object links
+Status: OPEN
+Dependencies: None.
+Implementation: Add validated URL/reference metadata, host navigation callbacks and a focus-by-ID deep-link contract.
+Acceptance: Reject unsafe schemes; distinguish editing from navigation; stale or deleted IDs show a useful failure.
+
+NBD-14 Image crop
+Status: OPEN
+Dependencies: None.
+Implementation: Store crop rectangles and masks non-destructively; implement matching canvas, preview, hit-test and export paths.
+Acceptance: Rotation, resize and crop compose correctly; reset restores the original; imports reject invalid crop coordinates.
+
+NBD-15 Connection ports
+Status: OPEN
+Dependencies: None.
+Implementation: Add stable named ports with accepted connection types and integrate them into binding resolution and property controls.
+Acceptance: Invalid connections are rejected; renaming preserves IDs; deleting a port detaches connections; duplication remaps references.
+
+NBD-16 Keyboard navigation
+Status: PARTIAL
+Dependencies: NBD-02.
+Implementation: Add roving object focus, selection extension, move/resize commands and an accessible relationship outline.
+Acceptance: Complete select, move, connect and delete workflows without a pointer; locked/read-only behavior and focus recovery are verified.
+
+NBD-17 Selection bookmarks
+Status: OPEN
+Dependencies: NBD-01.
+Implementation: Add named ID sets through host persistence callbacks and select/focus controls independent of grouping.
+Acceptance: Deleted members are reported and skipped; restoring a bookmark never changes object grouping or visibility.
+
+NBD-18 Diagram import
+Status: OPEN
+Dependencies: NBD-04, NBD-11.
+Implementation: Parse bounded CSV/structured text into nodes and edges, report errors, preview the result and commit one validated insertion.
+Acceptance: Quoted fields, duplicate IDs, missing endpoints and malicious labels are handled; cancellation leaves the board unchanged.
+
+NBD-19 Versions
+Status: OPEN
+Dependencies: None.
+Implementation: Expose host revision lists, object-level differences and restore previews with expected-revision checks.
+Acceptance: Concurrent changes block stale restores; media and connector metadata survive restore; read-only comparison remains available.
+
+NBD-20 Voting
+Status: OPEN
+Dependencies: NBD-07 for identity.
+Implementation: Define host-controlled voting sessions, per-user limits and reveal state; keep authoritative enforcement on the host.
+Acceptance: Duplicate/replayed votes do not bypass limits; unrevealed results stay private; reconnect and deleted notes are handled.
+
+NBD-21 Workshop timer
+Status: OPEN
+Dependencies: NBD-07.
+Implementation: Use a host start timestamp, elapsed duration and paused state; display synchronized remaining time with optional prompts.
+Acceptance: Reconnect reconstructs time, local clock drift is bounded, only authorized hosts control the timer, and prompts are accessible.
+
+NBD-22 Shape recognition
+Status: OPEN
+Dependencies: None.
+Implementation: Classify bounded freehand samples into a small supported shape set and show a replace preview with confidence.
+Acceptance: Low-confidence strokes remain unchanged; rejection keeps the stroke; accepted replacement preserves style and one-step undo.
+
+NBD-23 Document cards
+Status: OPEN
+Dependencies: NBD-13, DOC-23.
+Implementation: Add host-resolved document references, excerpts, revision IDs and refresh/navigation callbacks with a portable fallback.
+Acceptance: Permission revocation hides content; stale excerpts are marked; exports and disconnected clients use the allowed fallback.
+
+NBD-24 Calculation objects
+Status: OPEN
+Dependencies: CAL-27.
+Implementation: Add versioned calculation metadata and host reopen/recalculate controls while retaining readable fallback text.
+Acceptance: Updates target one object, preserve position/style and enter history; unsupported payload versions remain readable.
+
+NBD-25 Style presets
+Status: OPEN
+Dependencies: None.
+Implementation: Define validated style-only presets, host save/load callbacks and apply-to-selection controls with per-type compatibility.
+Acceptance: Presets cannot overwrite IDs or geometry; incompatible fields are skipped visibly; one undo restores all affected styles.
+
+NBD-26 Media picker
+Status: OPEN
+Dependencies: None.
+Implementation: Add host media selection and asset-resolution callbacks, stable asset references and an explicit portable export policy.
+Acceptance: Avoid duplicate stored bytes; handle revoked/expired URLs, missing assets and late completion after permission changes.
+
+References
+
+CommonMark links and images: https://spec.commonmark.org/0.31.2/#links
+Yjs array operations: https://docs.yjs.dev/api/shared-types/y.array
+npm package inspection: https://docs.npmjs.com/cli/v11/commands/npm-pack/
+
+Remaining audit work
+
+These previously reported audit items are separate from the 26 product features. They remain open or partial until the checks below are complete.
+
+NBD-R01 Production collaboration reproduction
+Capture a consenting two-user host session with provider reconnect and persistence enabled. Reproduce simultaneous text edits, local undo and cursor movement on two devices. Record versions and expected/actual behavior before closing the reported issue.
+
+NBD-R10 Text geometry
+Centralize text measurement for every font, weight, style, line-height and width mutation. Verify bounds, hit tests and export against rotated multiline labels in each property-panel position.
+
+NBD-R11 Editor overlay geometry
+Test rotated, multiline, aligned shape and standalone text in Chrome, Firefox and Safari. The overlay must match rendered baselines and dimensions during zoom, pan and peer updates.
+
+NBD-R18 Performance budgets
+Add reproducible 1k/10k-object and long-stroke fixtures. Record hardware/browser, pan/selection latency, memory and export time; set budgets before marking load testing complete. The 150k mocked export regression checks argument safety only.
+
+NBD-R20 Durable drafts and cancel
+Add a host-owned recoverable draft queue keyed by board/element/revision. Cancel must revert only the local edit intent while preserving peer text; reload, remote deletion and host-save failure must retain recovery.
+
+NBD-R21 Touch and stylus
+Track pointer IDs for two-finger navigation, stylus pressure and palm rejection policy. Test on physical touch/pen devices; browser-synthesized pointer events alone are insufficient.
+
+NBD-R22 External clipboard
+Add versioned board MIME, SVG/image and plain-text clipboard representations with strict import validation and permission-failure feedback. Test cross-app paste and internal reference remapping.
+
+NBD-R25 Import preview
+Show object count, bounds, media limits and validation warnings before choosing merge or replace. Merge remaps IDs and bindings; either choice creates one undo step and cancellation changes nothing.
+
+NBD-R26 Editing presence
+Build on NBD-07 with host session identities, active-element indicators and collision hints. Stale sessions expire; hints do not lock out legitimate concurrent edits or enter board history.
+
+12 October 2026 security review follow-up — implemented
+
+Bounded rough-line interpolation, linear shape-label measurement, raster-only snapshot image admission, decoded image size ceiling, bounded asynchronous export waits with listener cleanup, consistent upload ceilings and malformed Yjs record quarantine. Regressions cover 1e9 coordinates, 1000-point paths, 7 MiB base64 payloads, long labels, malformed peer records, oversized decoded images and delayed export completion.
+Existing OPEN/PARTIAL roadmap statuses remain unchanged. Host authorization, transport quotas and cross-browser/load testing are separate responsibilities. See implementation-review.txt for the review loop and evidence.

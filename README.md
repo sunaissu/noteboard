@@ -77,7 +77,7 @@ export default function App() {
 | `initialViewport` | `NoteboardViewport` | `undefined` | Seed pan & zoom on first mount (e.g. from a saved `NoteboardSession`). |
 | `viewport` | `NoteboardViewport` | `undefined` | Fully controlled pan and zoom state. Use with `onViewportChange` for persistence or collaboration. |
 | `elements` | `NoteboardElement[]` | `undefined` | Fully controlled elements array. Use alongside `onElementsChange` for real-time collaboration. |
-| `onElementsChange` | `(elements: NoteboardElement[]) => void` | `undefined` | Fires after every local draw, edit, move, or delete. |
+| `onElementsChange` | `(elements: NoteboardElement[], previous?: NoteboardElement[]) => void` | `undefined` | Fires after every local draw, edit, move, or delete. Forward both arguments when wrapping a collaborative binding. |
 | `onViewportChange` | `(viewport: NoteboardViewport) => void` | `undefined` | Fires whenever the user pans or zooms. Use to persist or broadcast the viewport. |
 | `readOnly` | `boolean` | `undefined` | Controlled read-only mode — hides the toolbar, disables all editing interactions. |
 | `defaultReadOnly` | `boolean` | `false` | Initial read-only state (uncontrolled). |
@@ -122,10 +122,12 @@ function App() {
 | Method | Signature | Description |
 |---|---|---|
 | `getElements()` | `() => NoteboardElement[]` | Returns the current live elements array. |
-| `setElements()` | `(elements: NoteboardElement[]) => void` | Imperatively replaces the board elements. |
+| `setElements()` | `(elements: NoteboardElement[]) => void` | Replaces elements through history and honors read-only mode. |
 | `setViewport()` | `(viewport: NoteboardViewport) => void` | Imperatively pans and zooms the board. Zoom is clamped to the supported range. |
 | `getSession()` | `() => NoteboardSession` | Returns a full DB-ready board snapshot. |
-| `exportImage()` | `(format?: 'png' \| 'jpeg') => string` | Returns the canvas as a data URL. |
+| `exportImage()` | `(format?: 'png' \| 'jpeg', options?: BoardImageOptions) => string` | Renders board content as a data URL; images must already be loaded. |
+| `exportImageAsync()` | `(format?: 'png' \| 'jpeg', options?: BoardImageOptions) => Promise<string>` | Waits for images, then exports board content. |
+| `focusElements()` | `(ids: string[]) => void` | Selects matching objects and fits them into view. |
 
 ---
 
@@ -168,7 +170,7 @@ function App() {
 
 ## 🤝 Multiplayer & Collaboration
 
-Noteboard is server-agnostic. For conflict-free concurrent editing, install Yjs and connect the optional adapter to any Yjs provider:
+Noteboard is server-agnostic. For concurrent editing, install Yjs and connect the optional adapter to any Yjs provider:
 
 ```tsx
 import * as Y from 'yjs';
@@ -183,6 +185,7 @@ export function MultiplayerBoard() {
     <Noteboard
       elements={binding.elements}
       onElementsChange={binding.onElementsChange}
+      history={binding.history}
       viewport={binding.viewport}
       onViewportChange={binding.onViewportChange}
     />
@@ -190,7 +193,7 @@ export function MultiplayerBoard() {
 }
 ```
 
-Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values, z-order in a `Y.Array`, and the viewport in a dedicated `Y.Map`, allowing concurrent changes to merge without coupling the package to authentication, persistence, or a particular transport.
+Attach `document` to a provider such as Hocuspocus or `y-websocket`. The adapter stores elements in independent `Y.Map` values and labels in `Y.Text`. Pass `binding.history` to scope undo to the current editor. Navigation stays local by default; set `shareViewport: true` only for shared navigation. Z-order remains a separate `Y.Array`. The adapter applies local insertion, deletion and move changes without replacing untouched order entries. A stale append preserves peer ordering, and undo tracks local changes. Simultaneous moves of the same object follow Yjs conflict ordering. Authentication, persistence, and transport belong to the host.
 
 Connector `startBinding` and `endBinding` metadata is part of each line or arrow element, so the adapter and normal JSON session serialization preserve snapped connections automatically.
 
@@ -254,3 +257,56 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes across versions.
 ## 📜 License
 
 MIT License. See [LICENSE](./LICENSE) for details.
+
+## Unreleased collaboration migration
+
+This working tree changes the shared text schema. Before updating an existing collaborative deployment, back up the Yjs document, disconnect old clients, run `migrateNoteboardText(document)` from `@sunaissu/noteboard/yjs` on the authoritative document, persist it, and reconnect only updated clients. Do not let disconnected old clients independently migrate or overwrite the same labels. Plain JSON board snapshots still contain ordinary text strings.
+
+The adapter initializes content only once per mounted binding. For a provider-backed document, seed initial content on the server after loading persisted state; mounting clients should not independently seed an empty document before synchronization.
+
+## Editable templates and playground
+
+`createBoardTemplate` returns fresh editable objects for `flowchart`, `planning`, and `brainstorm`. Each call generates new object/group IDs and internal connector bindings. Insert through the ref to record one undo action:
+
+```tsx
+import { createBoardTemplate } from '@sunaissu/noteboard';
+
+const board = boardRef.current;
+if (board) {
+  const added = createBoardTemplate('planning', { x: 100, y: 80 });
+  board.setElements([...board.getElements(), ...added]);
+  board.focusElements(added.map(element => element.id));
+}
+```
+
+The playground now shares the calculator/editor page design: a responsive canvas and inspector, theme/brand controls, template insertion, fit/reset, PNG and session JSON exports, and a JSON preview with merge/replace choices. Merge assigns new IDs and remaps connections; import and reset can be undone. Read-only mode disables changes. Changes stay in memory until exported. Saved custom template catalogs and template version migration remain planned.
+
+## Navigation, exports, and image limits
+
+Settings includes an object search, board overview, and up to 20 viewpoints retained for the mounted session. `ref.current.focusElements(ids)` selects objects and fits them in view.
+
+`exportImage(format, options)` renders board content independently of the viewport, grid, and selection overlays. Use `exportImageAsync` when images may still be loading. Both accept `selectedIds`, `padding`, `scale`, and `background`; PNG can be transparent, while JPEG gets an opaque background. Output is capped at 8192 pixels per edge and 16 million pixels overall.
+
+Uploads and pasted images accept PNG, JPEG, GIF, and WebP. `maxImageBytes` defaults to 5 MiB and can lower that limit; `maxImagePixels` defaults to 16 million decoded pixels. The host must also enforce its storage limits. Imports, text edits, and imperative element replacements participate in history.
+
+See [the implementation review](./implementation-review.txt) for verification and [the feature backlog](./feature-backlog.txt) for all 26 feature contracts, dependencies and acceptance checks. OPEN and PARTIAL items remain unfinished. No release has been published from this working tree.
+
+## Development checks
+
+Run `npm test`, `npm run playground:build`, and `npm pack --dry-run --json` before release. The GitHub Actions workflow is configured to test the package on Node 18, 22 and 24, build the playground on Node 22/24, and audit both dependency trees. Browser checks remain a separate local step documented in the implementation review. The workflow has not been run on GitHub as part of this local review.
+
+## Properties layout and scrolling
+
+Top and bottom properties use category tabs and a horizontally scrollable row of controls, capped at 220 CSS pixels. Side panels retain the vertically scrollable inspector. Arrow keys, Home and End switch categories; Tab reaches their controls. Wheel input over horizontal properties moves the control strip. Toolbar and zoom placement follow the measured panel size, including collapse and narrow layouts.
+
+Wheel gestures over the canvas pan the board; Shift pans horizontally, and Ctrl/Command zooms around the cursor. Inspectors and text inputs scroll locally. Reaching an inspector edge does not scroll the surrounding page, and wheel input outside the board keeps normal page scrolling. Native wheel cancellation prevents browser scrolling alongside React canvas updates. Line/page wheel units are normalized; touch/stylus navigation remains separate work.
+
+## Review safeguards
+
+Snapshot images accept only PNG, JPEG, GIF and WebP base64 data URLs, with valid base64 syntax and an 8 MiB URL-text limit. Rendering rejects decoded images above 16 million pixels. Upload limits can lower the 5 MiB byte and 16 million pixel ceilings. The pixel check runs after browser decoding; hosts handling untrusted files should enforce media limits before serving them.
+
+Asynchronous image exports reject after 15 seconds if an image has not loaded. Set `imageTimeoutMs` in export options to a positive value up to 120000 milliseconds. A timeout removes that export's image listener, so a late load does not complete the failed export.
+
+The Yjs adapter validates peer records before rendering. Invalid records and records whose IDs disagree with their map keys stay in the shared document but are excluded from the view until repaired. The view is limited to 10000 valid objects. These checks do not authorize peer writes or limit the size of incoming Yjs updates: enforce permissions, document/update quotas and persistence limits in the host. Direct controlled element props are trusted application input; validate external snapshots with `deserializeBoard`.
+
+Rough strokes cap interpolation work independently of coordinate distance, with a shared budget per polyline. Shape-label wrapping measures words once instead of repeatedly measuring a growing line. These bounds prevent the reproduced amplification cases; they are not a general large-board performance guarantee.

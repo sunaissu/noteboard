@@ -27,7 +27,7 @@ export function StickyNoteSection({ selectedElements, onUpdate }: Props) {
             <CollapsibleSection label="Note Color" theme={theme}>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
                 {NOTE_COLORS.map((c) => (
-                    <button
+                    <button type="button"
                         key={c.key}
                         title={c.label}
                         onClick={() => onUpdate({ noteColor: c.key } as any)}

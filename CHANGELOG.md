@@ -8,6 +8,24 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- Shared labels use Y.Text; migrate authoritative documents before admitting updated clients. Local navigation is now the default.
+- All four property panel positions use the same controls, with scrolling and responsive layouts.
+
+### Added
+
+- Object search, board overview, session viewpoints, and focusElements.
+- Clean content exports with region selection and asynchronous image loading.
+- Draft recovery notices and keyboard context-menu navigation.
+
+### Fixed
+
+- Stale snapshots preserve peer insertions and unrelated properties; shared undo tracks local transactions.
+- Active text publishes while typing and adjusts the local caret after peer edits.
+- Pen resizing retains pressure, locked objects reject ongoing resize changes, and image uploads/pastes share admission checks.
+- Embedded context-menu coordinates, modified shape shortcuts, and mobile toolbar spacing.
+
 ---
 
 ## [2.0.1] — 2026-09-04

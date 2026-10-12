@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Y from 'yjs';
+import { applyTextEdit, trackText } from './yjsText';
+import { updateSharedOrder } from './yjsOrder';
+import type { HistoryAPI } from './hooks/useHistory';
 import type { NoteboardElement } from './elements/types';
 import type { NoteboardViewport } from './session';
+import { MAX_BOARD_ELEMENTS, normalizeImportedElement } from './session';
 import { MAX_ZOOM, MIN_ZOOM } from './constants';
 
 export const YJS_NOTEBOARD_ELEMENTS_KEY = 'noteboard-elements';
@@ -14,13 +18,16 @@ export interface YjsNoteboardOptions {
     initialElements?: NoteboardElement[];
     initialViewport?: NoteboardViewport;
     viewportKey?: string;
+    /** Opt into shared navigation for follow/presentation mode. Default: local. */
+    shareViewport?: boolean;
 }
 
 export interface YjsNoteboardBinding {
     elements: NoteboardElement[];
-    onElementsChange: (elements: NoteboardElement[]) => void;
+    onElementsChange: (elements: NoteboardElement[], previous?: NoteboardElement[]) => void;
     onViewportChange: (viewport: NoteboardViewport) => void;
     viewport: NoteboardViewport;
+    history: HistoryAPI;
 }
 
 const valuesEqual = (left: unknown, right: unknown) =>
@@ -34,10 +41,22 @@ const readElements = (
     const included = new Set<string>();
 
     const append = (id: string) => {
-        const value = elementStore.get(id);
-        if (!value || included.has(id)) return;
-        result.push(value.toJSON() as unknown as NoteboardElement);
+        if (typeof id !== 'string' || included.has(id) || result.length >= MAX_BOARD_ELEMENTS) return;
         included.add(id);
+        const value = elementStore.get(id);
+        if (!(value instanceof Y.Map)) return;
+        let element: NoteboardElement;
+        try {
+            element = normalizeImportedElement(value.toJSON(), result.length);
+            if (element.id !== id) return;
+        } catch {
+            // Keep malformed peer records in the shared document, but exclude
+            // them from the renderable view until their author repairs them.
+            return;
+        }
+        const text = value.get("text");
+        if (text instanceof Y.Text) trackText(text);
+        result.push(element);
     };
 
     orderStore.toArray().forEach(append);
@@ -45,15 +64,34 @@ const readElements = (
     return result;
 };
 
-const writeElement = (target: Y.Map<unknown>, element: NoteboardElement) => {
+const writeElement = (target: Y.Map<unknown>, element: NoteboardElement, previous?: NoteboardElement) => {
     const next = element as unknown as Record<string, unknown>;
-    Array.from(target.keys()).forEach((key) => {
+    const base = (previous ?? {}) as unknown as Record<string, unknown>;
+    Object.keys(base).forEach((key) => {
         if (!(key in next)) target.delete(key);
     });
     Object.entries(next).forEach(([key, value]) => {
-        if (!valuesEqual(target.get(key), value)) target.set(key, value);
+        if (valuesEqual(base[key], value)) return;
+        const current = target.get(key);
+        if (key === 'text' && typeof value === 'string') {
+            if (current instanceof Y.Text) applyTextEdit(current, typeof base[key] === 'string' ? base[key] as string : current.toString(), value);
+            else { const text = new Y.Text(value); target.set(key, text); trackText(text); }
+        } else if (!valuesEqual(current, value)) target.set(key, value);
     });
 };
+
+/** Run once on the authoritative document before admitting clients from older schemas. */
+export function migrateNoteboardText(document: Y.Doc, elementsKey = YJS_NOTEBOARD_ELEMENTS_KEY): void {
+    document.transact(() => {
+        document.getMap<Y.Map<unknown>>(elementsKey).forEach(element => {
+            if (!(element instanceof Y.Map)) return;
+            const value = element.get('text');
+            if (typeof value === 'string') element.set('text', new Y.Text(value));
+            const text = element.get('text');
+            if (text instanceof Y.Text) trackText(text);
+        });
+    }, 'noteboard-text-migration');
+}
 
 /**
  * Connects Noteboard's controlled elements API to a Yjs document.
@@ -91,9 +129,11 @@ export function useYjsNoteboard(
                 : 1,
         };
     }, [stores.viewport]);
-    const [viewport, setViewport] = useState<NoteboardViewport>(readViewport);
+    const [viewport, setViewport] = useState<NoteboardViewport>(() => options.initialViewport ?? { panX: 0, panY: 0, zoom: 1 });
+    const seeded = useRef(new WeakSet<Y.Map<Y.Map<unknown>>>());
 
     useEffect(() => {
+        migrateNoteboardText(document, elementsKey);
         const refresh = (transaction?: Y.Transaction) => {
             // Local board mutations are already applied optimistically by
             // onElementsChange. Re-reading them through Yjs creates a fresh
@@ -114,7 +154,7 @@ export function useYjsNoteboard(
         stores.order.observe(refreshOrder);
 
         const initialElements = options.initialElements;
-        if (stores.elements.size === 0 && initialElements?.length) {
+        if (!seeded.current.has(stores.elements) && stores.elements.size === 0 && initialElements?.length) {
             document.transact(() => {
                 initialElements.forEach((element) => {
                     const value = new Y.Map<unknown>();
@@ -128,13 +168,15 @@ export function useYjsNoteboard(
             refresh();
         }
 
+        seeded.current.add(stores.elements);
         return () => {
             stores.elements.unobserveDeep(refreshElements);
             stores.order.unobserve(refreshOrder);
         };
-    }, [document, localOrigin, options.initialElements, stores]);
+    }, [document, elementsKey, localOrigin, options.initialElements, stores]);
 
     useEffect(() => {
+        if (!options.shareViewport) return;
         const refresh = (transaction?: Y.Transaction) => {
             // As with elements, avoid reflecting an older local viewport echo
             // back into a controlled canvas. Remote viewport transactions are
@@ -160,35 +202,36 @@ export function useYjsNoteboard(
         }
 
         return () => stores.viewport.unobserve(refreshViewport);
-    }, [document, localOrigin, options.initialViewport, readViewport, stores.viewport]);
+    }, [document, localOrigin, options.initialViewport, options.shareViewport, readViewport, stores.viewport]);
 
-    const onElementsChange = useCallback((nextElements: NoteboardElement[]) => {
+    const onElementsChange = useCallback((nextElements: NoteboardElement[], previous = elements) => {
+        const base = new Map(previous.map(element => [element.id, element]));
         document.transact(() => {
             const nextIds = new Set(nextElements.map((element) => element.id));
-            Array.from(stores.elements.keys()).forEach((id) => {
+            Array.from(base.keys()).forEach((id) => {
                 if (!nextIds.has(id)) stores.elements.delete(id);
             });
 
             nextElements.forEach((element) => {
                 let value = stores.elements.get(element.id);
+                if (value && !(value instanceof Y.Map)) return;
+                if (!value && base.has(element.id)) return;
                 if (!value) {
                     value = new Y.Map<unknown>();
                     stores.elements.set(element.id, value);
                 }
-                writeElement(value, element);
+                writeElement(value, element, base.get(element.id));
             });
 
-            const currentOrder = stores.order.toArray();
             const nextOrder = nextElements.map((element) => element.id);
-            if (!valuesEqual(currentOrder, nextOrder)) {
-                if (stores.order.length) stores.order.delete(0, stores.order.length);
-                if (nextOrder.length) stores.order.insert(0, nextOrder);
+            if (!valuesEqual(previous.map(element => element.id), nextOrder)) {
+                updateSharedOrder(stores.order, previous.map(element => element.id), nextOrder, id => stores.elements.has(id));
             }
         }, localOrigin);
-        // Publish the exact local snapshot once. The observers above ignore
-        // this transaction so a reconstructed echo cannot race a later drag.
-        setElements(nextElements);
-    }, [document, localOrigin, stores]);
+        // Preserve local identity when merging did not add a peer change.
+        const merged = readElements(stores.elements, stores.order);
+        setElements(valuesEqual(merged, nextElements) ? nextElements : merged);
+    }, [document, localOrigin, stores, elements]);
 
     const onViewportChange = useCallback((nextViewport: NoteboardViewport) => {
         const normalizedViewport = {
@@ -198,7 +241,7 @@ export function useYjsNoteboard(
                 ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextViewport.zoom))
                 : 1,
         };
-        document.transact(() => {
+        if (options.shareViewport) document.transact(() => {
             if (stores.viewport.get('panX') !== normalizedViewport.panX) {
                 stores.viewport.set('panX', normalizedViewport.panX);
             }
@@ -210,7 +253,20 @@ export function useYjsNoteboard(
             }
         }, localOrigin);
         setViewport(normalizedViewport);
-    }, [document, localOrigin, stores.viewport]);
+    }, [document, localOrigin, stores.viewport, options.shareViewport]);
 
-    return { elements, onElementsChange, onViewportChange, viewport };
+    const undoManager = useRef<Y.UndoManager | null>(null);
+    useEffect(() => {
+        const manager = new Y.UndoManager([stores.elements, stores.order], { trackedOrigins: new Set([localOrigin]), captureTimeout: Infinity });
+        undoManager.current = manager;
+        return () => { undoManager.current = null; manager.destroy(); };
+    }, [stores, localOrigin]);
+    const history = useMemo<HistoryAPI>(() => ({
+        record: () => undoManager.current?.stopCapturing(),
+        undo: () => { undoManager.current?.undo(); return null; },
+        redo: () => { undoManager.current?.redo(); return null; },
+        canUndo: () => Boolean(undoManager.current?.undoStack.length),
+        canRedo: () => Boolean(undoManager.current?.redoStack.length),
+    }), []);
+    return { elements, onElementsChange, onViewportChange, viewport, history };
 }

@@ -96,6 +96,7 @@ test('preview repaints loaded images and refreshes a changed image source', (t) 
     global.Image = class FakeImage {
         complete = false;
         naturalWidth = 0;
+        naturalHeight = 40;
         onerror = null;
         onload = null;
 

@@ -4,9 +4,6 @@
  */
 import type { Point } from '../elements/types';
 import { GRID_SIZE, SNAP_THRESHOLD } from '../constants';
-
-// ─── Grid drawing ─────────────────────────────────────────────
-
 export function drawGrid(
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -41,9 +38,6 @@ export function drawGrid(
 
     ctx.restore();
 }
-
-// ─── Snap ────────────────────────────────────────────────────
-
 /**
  * Snaps a canvas-space point to the nearest grid intersection.
  * Returns the original point if snap is disabled or too far.

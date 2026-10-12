@@ -7,6 +7,7 @@ import { useNoteboardTheme } from '../../ThemeContext';
 import { iconBtnStyle } from './primitives';
 
 interface Props {
+    compact?: boolean;
     isLocked: boolean;
     isMultiSelect: boolean;
     onToggleLock?: () => void;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function PanelHeader({
+    compact = false,
     isLocked, isMultiSelect,
     onToggleLock, onBringToFront, onBringForward,
     onSendBackward, onSendToBack, onGroup, onUngroup,
@@ -27,19 +29,19 @@ export function PanelHeader({
     const ibs = (active = false) => iconBtnStyle(theme, active);
 
     return (
-        <div style={{ padding: '6px 10px 6px', borderBottom: theme.panelBorder, flexShrink: 0 }}>
+        <div style={{ padding: compact ? 0 : '6px 10px', borderBottom: compact ? undefined : theme.panelBorder, flexShrink: 0 }}>
             {/* Z-order, group, lock — all in one row */}
             <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <button onClick={onBringToFront} title="Bring to Front" style={ibs()}><ArrowFatLineUpIcon size={14} /></button>
-                <button onClick={onBringForward} title="Bring Forward" style={ibs()}><ArrowFatUpIcon size={14} /></button>
-                <button onClick={onSendBackward} title="Send Backward" style={ibs()}><ArrowFatDownIcon size={14} /></button>
-                <button onClick={onSendToBack} title="Send to Back" style={ibs()}><ArrowFatLineDownIcon size={14} /></button>
+                <button type="button" onClick={onBringToFront} title="Bring to Front" style={ibs()}><ArrowFatLineUpIcon size={14} /></button>
+                <button type="button" onClick={onBringForward} title="Bring Forward" style={ibs()}><ArrowFatUpIcon size={14} /></button>
+                <button type="button" onClick={onSendBackward} title="Send Backward" style={ibs()}><ArrowFatDownIcon size={14} /></button>
+                <button type="button" onClick={onSendToBack} title="Send to Back" style={ibs()}><ArrowFatLineDownIcon size={14} /></button>
                 <div style={{ flex: 1 }} />
                 {isMultiSelect && (
-                    <button onClick={onGroup} title="Group (Ctrl+G)" style={ibs()}><FrameCornersIcon size={14} /></button>
+                    <button type="button" onClick={onGroup} title="Group (Ctrl+G)" style={ibs()}><FrameCornersIcon size={14} /></button>
                 )}
-                <button onClick={onUngroup} title="Ungroup (Ctrl+Shift+G)" style={ibs()}><MinusIcon size={14} /></button>
-                <button onClick={onToggleLock} title={isLocked ? 'Unlock' : 'Lock'} style={ibs(isLocked)}>
+                <button type="button" onClick={onUngroup} title="Ungroup (Ctrl+Shift+G)" style={ibs()}><MinusIcon size={14} /></button>
+                <button type="button" onClick={onToggleLock} title={isLocked ? 'Unlock' : 'Lock'} style={ibs(isLocked)}>
                     {isLocked
                         ? <LockSimpleIcon size={14} weight="bold" />
                         : <LockOpenIcon size={14} weight="regular" />

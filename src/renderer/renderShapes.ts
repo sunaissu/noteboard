@@ -1,7 +1,5 @@
 import type { NoteboardElement, RectangleElement } from '../elements/types';
 import { seededRandom, jitterPoint, drawJitteredLine } from './utils';
-
-// ─── Rectangle ───────────────────────────────────────────────
 export function renderRectangle(ctx: CanvasRenderingContext2D, element: RectangleElement) {
     const { x, y, width, height, backgroundColor, roughness, seed, borderRadius } = element;
     const r = Math.min(borderRadius ?? 0, Math.abs(width) / 2, Math.abs(height) / 2);
@@ -33,8 +31,6 @@ export function renderRectangle(ctx: CanvasRenderingContext2D, element: Rectangl
         else { ctx.strokeRect(x, y, width, height); }
     }
 }
-
-// ─── Ellipse ─────────────────────────────────────────────────
 export function renderEllipse(ctx: CanvasRenderingContext2D, element: NoteboardElement) {
     const { x, y, width, height, backgroundColor, roughness, seed } = element;
     const cx = x + width / 2, cy = y + height / 2;
@@ -59,8 +55,6 @@ export function renderEllipse(ctx: CanvasRenderingContext2D, element: NoteboardE
         ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
     }
 }
-
-// ─── Diamond ─────────────────────────────────────────────────
 export function renderDiamond(ctx: CanvasRenderingContext2D, element: NoteboardElement) {
     const { x, y, width, height, backgroundColor, roughness, seed } = element;
     const cx = x + width / 2, cy = y + height / 2;
@@ -90,8 +84,6 @@ export function renderDiamond(ctx: CanvasRenderingContext2D, element: NoteboardE
         ctx.closePath(); ctx.stroke();
     }
 }
-
-// ─── Triangle ────────────────────────────────────────────────
 export function renderTriangle(ctx: CanvasRenderingContext2D, element: NoteboardElement) {
     const { x, y, width, height, backgroundColor, roughness, seed } = element;
     const x1 = Math.min(x, x + width), y1 = Math.min(y, y + height);
@@ -121,8 +113,6 @@ export function renderTriangle(ctx: CanvasRenderingContext2D, element: Noteboard
         ctx.closePath(); ctx.stroke();
     }
 }
-
-// ─── Shape inline text ────────────────────────────────────────
 export function renderShapeText(
     ctx: CanvasRenderingContext2D,
     element: NoteboardElement,
@@ -150,14 +140,18 @@ export function renderShapeText(
     const lineHeight = fontSize * lineHeightMultiplier;
     const words = text.split(/\s+/);
     const lines: string[] = [];
-    let currentLine = '';
+    let currentLine: string[] = [];
+    let currentWidth = 0;
+    const spaceWidth = ctx.measureText(' ').width;
     for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-            lines.push(currentLine); currentLine = word;
-        } else { currentLine = testLine; }
+        if (!word) continue;
+        const wordWidth = ctx.measureText(word).width;
+        const nextWidth = currentWidth + (currentLine.length ? spaceWidth : 0) + wordWidth;
+        if (nextWidth > maxWidth && currentLine.length) {
+            lines.push(currentLine.join(' ')); currentLine = [word]; currentWidth = wordWidth;
+        } else { currentLine.push(word); currentWidth = nextWidth; }
     }
-    if (currentLine) lines.push(currentLine);
+    if (currentLine.length) lines.push(currentLine.join(' '));
 
     const totalTextHeight = lines.length * lineHeight;
     const absX = Math.min(x, x + width), absY = Math.min(y, y + height);

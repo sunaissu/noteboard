@@ -1,3 +1,7 @@
+import { exportBoardImage, renderBoardImage } from './exportImage';
+import { BoardNavigator } from './components/BoardNavigator';
+import { combineBounds, getElementBounds } from './elements/bounds';
+import { moveTextPosition } from './textEdit';
 import React, { useState, useCallback, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -30,9 +34,18 @@ import {
 import { isLockedElement, isShapeElement } from './elements/types';
 
 
+function resizeTextInput(textarea: HTMLTextAreaElement) {
+    textarea.style.height = '0px';
+    textarea.style.height = textarea.scrollHeight + 2 + 'px';
+    textarea.style.width = 'auto';
+    textarea.style.width = Math.max(textarea.scrollWidth + 2, 2) + 'px';
+}
+
 export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     {
         slots = DEFAULT_SLOTS,
+        maxImageBytes = 5 * 1024 * 1024, maxImagePixels = 16_000_000,
+        history: externalHistory,
         toolbarPosition = 'bottom',
         propertiesPosition = 'left',
         onToolSelect,
@@ -59,12 +72,12 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     ref,
 ) => {
     const [internalTool, setInternalTool] = useState<Tool>('select');
-
-    // ─── Read-only / View mode ────────────────────────────
     const [internalReadOnly] = useState(defaultReadOnly);
     const isReadOnly = controlledReadOnly ?? internalReadOnly;
-
-    // ─── Shortcut modal & context menu state ────────────────────
+    const readOnlyRef = useRef(isReadOnly);
+    readOnlyRef.current = isReadOnly;
+    const importGeneration = useRef(0);
+    useEffect(() => () => { importGeneration.current++; }, []);
     const [shortcutOpen, setShortcutOpen] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const [isFocused, setIsFocused] = useState(false);
@@ -79,10 +92,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const containerRef = useRef<HTMLDivElement>(null);
     const textInputRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pasteImageRef = useRef<(file: File) => void>(() => {});
     const imageInsertPosRef = useRef<{ x: number; y: number } | null>(null);
     const [size, setSize] = useState({ width: 800, height: 600 });
-
-    // ─── Theme state ─────────────────────────────────────────
     const isControlledThemeMode = typeof themeProp === 'string';
     const legacyThemeOverrides = typeof themeProp === 'object' ? themeProp : undefined;
     const [internalThemeMode, setInternalThemeMode] = useState<NoteboardThemeMode>(defaultTheme);
@@ -131,11 +143,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     );
 
     useToolbarShortcuts(slots, handleToolSelect, isFocused);
-
-    // ─── ? key → shortcut modal ──────────────────────────────
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (!isFocused) return;
+            if (!isFocused || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.key === '?') setShortcutOpen((v) => !v);
@@ -143,11 +153,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [isFocused]);
-
-    // ─── Shape keyboard shortcuts (R, O, D, T) + G for grid ─────────
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (!isFocused) return;
+            if (!isFocused || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
             // Skip if typing in an input
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -184,15 +192,39 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         return () => observer.disconnect();
     }, []);
 
-    // Prevent browser zoom when cursor is inside the board
+    // React's delegated wheel listener can be passive. Cancel the browser's
+    // default scroll here, before React applies canvas pan/zoom.
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            if (e.ctrlKey || e.metaKey) {
+            if (e.target === canvasRef.current || e.ctrlKey || e.metaKey) {
                 e.preventDefault();
+                return;
             }
+            // Let nested inspectors/textareas scroll, but never chain a wheel
+            // gesture from their edges into the host page.
+            let target = e.target instanceof Element ? e.target : null;
+            while (target && target !== container) {
+                if (target instanceof HTMLElement) {
+                    const style = getComputedStyle(target);
+                    const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+                    const dy = e.shiftKey ? 0 : e.deltaY;
+                    if (target.dataset.scrollAxis === 'horizontal' && target.scrollWidth > target.clientWidth) {
+                        const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+                        const units = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? target.clientWidth : 1;
+                        target.scrollLeft += delta * units;
+                        e.preventDefault();
+                        return;
+                    }
+                    const canScroll = (position: number, extent: number, delta: number) => delta < 0 ? position > 0 : delta > 0 && position < extent - 1;
+                    if ((/(auto|scroll)/.test(style.overflowY) && canScroll(target.scrollTop, target.scrollHeight - target.clientHeight, dy)) ||
+                        (/(auto|scroll)/.test(style.overflowX) && canScroll(target.scrollLeft, target.scrollWidth - target.clientWidth, dx))) return;
+                }
+                target = target.parentElement;
+            }
+            e.preventDefault();
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
@@ -224,6 +256,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     const useCanvasDrawingResult = useCanvasDrawing({
         activeTool: currentTool,
+        history: externalHistory,
         width: size.width,
         height: size.height,
         canvasBg: resolvedTheme.canvasBg,
@@ -241,6 +274,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         externalElements,
         onElementsChange,
         onViewportChange,
+        onImagePaste: file => { imageInsertPosRef.current = null; pasteImageRef.current(file); },
         onImageInsertRequest: useCallback((x: number, y: number) => {
             imageInsertPosRef.current = { x, y };
             fileInputRef.current?.click();
@@ -251,7 +285,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         canvasRef,
         handlers,
         textEdit,
-        commitText,
+        commitText, recoveredText, clearRecoveredText,
         panOffset,
         setPanOffset,
         zoom,
@@ -264,24 +298,33 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         zoomIn, zoomOut, zoomReset, fitAll,
     } = useCanvasDrawingResult;
 
-    const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handleImageFile = useCallback((file: File) => {
+        if (readOnlyRef.current) return;
+        const byteLimit = Number.isFinite(maxImageBytes) ? Math.min(maxImageBytes, 5 * 1024 * 1024) : 5 * 1024 * 1024;
+        const pixelLimit = Number.isFinite(maxImagePixels) ? Math.min(maxImagePixels, 16_000_000) : 16_000_000;
+        if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type) || file.size <= 0 || file.size > byteLimit) { alert('Choose a PNG, JPEG, GIF, or WebP within the image size limit.'); return; }
+        const generation = ++importGeneration.current;
 
-        const pos = imageInsertPosRef.current ?? { x: size.width / 2, y: size.height / 2 };
-        
+        const pos = imageInsertPosRef.current ?? { x: (size.width / 2 - panOffset.x) / zoom, y: (size.height / 2 - panOffset.y) / zoom };
+
         const reader = new FileReader();
+        reader.onerror = () => alert("The image file could not be read.");
         reader.onload = (ev) => {
+            if (readOnlyRef.current || generation !== importGeneration.current) return;
             const dataUrl = ev.target?.result as string;
             if (!dataUrl) return;
 
             const img = new Image();
+            img.onerror = () => alert("The image could not be decoded.");
             img.onload = () => {
+                if (readOnlyRef.current || generation !== importGeneration.current) return;
+                if (img.naturalWidth <= 0 || img.naturalHeight <= 0 || img.naturalWidth * img.naturalHeight > pixelLimit) { alert("The image exceeds the image pixel limit. Resize it first."); return; }
+                const scale = Math.min(1, size.width * .6 / img.naturalWidth, size.height * .6 / img.naturalHeight);
                 const el = createImageElement({
                     x: pos.x,
                     y: pos.y,
-                    width: img.naturalWidth,
-                    height: img.naturalHeight,
+                    width: img.naturalWidth * scale,
+                    height: img.naturalHeight * scale,
                     dataUrl,
                 });
                 setElements((prev) => {
@@ -294,20 +337,38 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             img.src = dataUrl;
         };
         reader.readAsDataURL(file);
-        
+
         // Reset file input so the same file can be uploaded again if needed
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-    }, [size, setElements, history, controlledTool, onToolSelect]);
+    }, [maxImageBytes, maxImagePixels, zoom, panOffset, size, setElements, history, controlledTool, onToolSelect]);
 
-    // ─── Imperative ref handle ────────────────────────────────
+    pasteImageRef.current = handleImageFile;
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (file) handleImageFile(file);
+    };
+
+    const focusElements = useCallback((ids: string[]) => {
+        const selected = new Set(ids);
+        const targets = elements.filter(element => selected.has(element.id) && !element.isDeleted);
+        if (!targets.length) return;
+        const bounds = targets.map(getElementBounds);
+        const [left, top, right, bottom] = combineBounds(bounds);
+        const scale = Math.max(MIN_ZOOM, Math.min(2, (size.width - 80) / Math.max(1, right - left), (size.height - 80) / Math.max(1, bottom - top)));
+        setSelectedIds(new Set(ids)); setZoom(scale);
+        setPanOffset({ x: size.width / 2 - (left + right) / 2 * scale, y: size.height / 2 - (top + bottom) / 2 * scale });
+    }, [elements, size, setSelectedIds, setZoom, setPanOffset]);
     useImperativeHandle(ref, () => ({
+        focusElements,
         getElements() {
             return elements;
         },
         setElements(newElements) {
-            setElements(newElements);
+            if (isReadOnly) return;
+            setElements((previous) => { history.record(previous); return newElements; });
         },
         setViewport(newViewport) {
             const nextZoom = Number.isFinite(newViewport.zoom)
@@ -329,12 +390,13 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 },
             );
         },
-        exportImage(format: 'png' | 'jpeg' = 'png') {
-            const canvas = canvasRef.current;
-            if (!canvas) return '';
-            return canvas.toDataURL(`image/${format}`);
+        exportImage(format = 'png', options) {
+            return renderBoardImage(elements, format, { background: resolvedTheme.canvasBg, ...options });
         },
-    }), [elements, setElements, setPanOffset, setZoom, panOffset, zoom, threadId, boardId]);
+        exportImageAsync(format = 'png', options) {
+            return exportBoardImage(elements, format, { background: resolvedTheme.canvasBg, ...options });
+        },
+    }), [elements, setElements, setPanOffset, setZoom, panOffset, zoom, threadId, boardId, isReadOnly, history, focusElements, resolvedTheme.canvasBg]);
 
     const handleSave = useCallback(() => {
         if (!onSave) return;
@@ -349,29 +411,14 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         onSave(session);
     }, [onSave, elements, panOffset, zoom, threadId, boardId]);
 
-    const handleExportImage = useCallback((format: 'png' | 'jpeg' = 'png') => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = canvas.width;
-        exportCanvas.height = canvas.height;
-        const ctx = exportCanvas.getContext('2d');
-        if (ctx) {
-            if (format === 'jpeg' || resolvedTheme.canvasBg !== 'transparent') {
-                ctx.fillStyle = resolvedTheme.canvasBg === 'transparent' ? '#ffffff' : resolvedTheme.canvasBg;
-                ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-            }
-            ctx.drawImage(canvas, 0, 0);
-            
-            const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-            const url = exportCanvas.toDataURL(mimeType);
+    const handleExportImage = useCallback(async (format: 'png' | 'jpeg' = 'png') => {
+        try {
+            const url = await exportBoardImage(elements, format, { background: resolvedTheme.canvasBg });
             const link = document.createElement('a');
             link.download = `noteboard-export-${new Date().toISOString().slice(0, 10)}.${format}`;
-            link.href = url;
-            link.click();
-        }
-    }, [resolvedTheme.canvasBg]);
+            link.href = url; link.click();
+        } catch (error) { alert(error instanceof Error ? error.message : 'Export failed'); }
+    }, [elements, resolvedTheme.canvasBg]);
 
     const handleExportJSON = useCallback(() => {
         const session = serializeBoard(
@@ -395,16 +442,20 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     const handleImportJSON = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || readOnlyRef.current) return;
+        const generation = ++importGeneration.current;
         if (file.size > MAX_BOARD_IMPORT_BYTES) {
             alert('Failed to load Noteboard file. The file is too large.');
             e.target.value = '';
             return;
         }
         const reader = new FileReader();
+        reader.onerror = () => alert("The board file could not be read.");
         reader.onload = (event) => {
+            if (readOnlyRef.current || generation !== importGeneration.current) return;
             try {
                 const snapshot = deserializeBoard(JSON.parse(event.target?.result as string));
+                if (!window.confirm(`Replace this board with ${snapshot.elements.length} imported objects? You can undo this action.`)) return;
                 setElements((previous) => {
                     history.record(previous);
                     return snapshot.elements;
@@ -428,12 +479,36 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
             });
         }
     }, [setElements, history]);
-
-    // ─── Properties panel support ─────────────────────────────
     const selectedElements = React.useMemo(
         () => elements.filter((el) => selectedIds.has(el.id) && !el.isDeleted),
         [elements, selectedIds],
     );
+
+    const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
+    const [toolbarHeight, setToolbarHeight] = useState(0);
+    useEffect(() => {
+        const panel = containerRef.current?.querySelector<HTMLElement>('[aria-label="Object properties"]');
+        if (!panel || isReadOnly || !selectedElements.length) { setPanelSize({ width: 0, height: 0 }); return; }
+        const measure = () => setPanelSize(previous => previous.width === panel.offsetWidth && previous.height === panel.offsetHeight ? previous : { width: panel.offsetWidth, height: panel.offsetHeight });
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(panel);
+        return () => observer.disconnect();
+    }, [isReadOnly, selectedElements.length, resolvedPropertiesPosition]);
+    useEffect(() => {
+        const toolbar = containerRef.current?.querySelector<HTMLElement>('[data-noteboard-toolbar]');
+        if (!toolbar) { setToolbarHeight(0); return; }
+        const measure = () => setToolbarHeight(toolbar.offsetHeight);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(toolbar);
+        return () => observer.disconnect();
+    }, [isReadOnly, toolbarPosition]);
+    const toolbarOffset = toolbarPosition === resolvedPropertiesPosition && selectedElements.length && !isReadOnly
+        ? 24 + (toolbarPosition === 'top' || toolbarPosition === 'bottom' ? panelSize.height : panelSize.width) : 12;
+    const zoomBottom = Math.max(12,
+        !isReadOnly && toolbarPosition === 'bottom' ? toolbarOffset + toolbarHeight + 12 : 0,
+        !isReadOnly && selectedElements.length && resolvedPropertiesPosition === 'bottom' ? panelSize.height + 24 : 0);
 
     // Look up the element being edited (for shape text editing font resolution)
     const editingElement = React.useMemo(
@@ -458,8 +533,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         },
         [history, selectedIds, setElements],
     );
-
-    // ─── Align callbacks (wired to AppearanceSection) ─────────
     const makeAlignCallback = useCallback((fn: (els: typeof elements, ids: Set<string>) => typeof elements) => () => {
         setElements((prev) => {
             const editableIds = new Set(
@@ -479,8 +552,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const handleAlignCenterV = makeAlignCallback(alignCenterV);
     const handleDistributeH  = makeAlignCallback(distributeH);
     const handleDistributeV  = makeAlignCallback(distributeV);
-
-    // ─── Z-ordering & grouping callbacks for PropertiesPanel ──
     const handleBringForward = useCallback(() => {
         setElements((prev) => {
             const editableIds = new Set(
@@ -577,15 +648,30 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
     // Focus text input when it appears and auto-size for existing content
     const textMountedRef = useRef(false);
+    const textComposingRef = useRef(false);
+    const textBaseRef = useRef('');
+    useEffect(() => {
+        const textarea = textInputRef.current;
+        const element = elements.find(element => element.id === textEdit.editingId);
+        if (!textarea || textComposingRef.current || !element || !('text' in element)) return;
+        const value = element.text ?? '';
+        if (textarea.value !== value) {
+            const before = textarea.value;
+            const start = moveTextPosition(textarea.selectionStart, before, value);
+            const end = moveTextPosition(textarea.selectionEnd, before, value);
+            const direction = textarea.selectionDirection;
+            textarea.value = value;
+            textarea.setSelectionRange(start, end, direction);
+        }
+        resizeTextInput(textarea);
+        textBaseRef.current = value;
+    }, [elements, textEdit.editingId]);
     useEffect(() => {
         if (textEdit.active && textInputRef.current) {
             textMountedRef.current = false;
             const ta = textInputRef.current;
             // Auto-size to fit existing multi-line content
-            ta.style.height = '0px';
-            ta.style.height = ta.scrollHeight + 2 + 'px';
-            ta.style.width = 'auto';
-            ta.style.width = Math.max(ta.scrollWidth + 2, 2) + 'px';
+            resizeTextInput(ta);
             // Delay focus slightly to avoid immediate blur issues
             requestAnimationFrame(() => {
                 if (textInputRef.current) {
@@ -598,8 +684,18 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         }
     }, [textEdit.active, textEdit.editingId]);
 
+    useEffect(() => {
+        if (isReadOnly && textInputRef.current) commitText(textInputRef.current.value);
+    }, [isReadOnly, commitText]);
+
     const handleTextKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         e.stopPropagation(); // Prevent canvas keyboard shortcuts from firing
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            const restored = e.shiftKey ? history.redo(elements) : history.undo(elements);
+            if (restored) setElements(restored);
+            return;
+        }
         if (e.key === 'Escape') {
             e.preventDefault();
             commitText(e.currentTarget.value);
@@ -626,6 +722,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     width: '100%',
                     height: '100%',
                     overflow: 'hidden',
+                    overscrollBehavior: 'contain',
                     outline: isFocused ? `2px solid ${resolvedTheme.primaryColor ?? resolvedTheme.buttonActiveColor}` : 'none',
                     outlineOffset: '-2px',
                     background: resolvedTheme.canvasBg,
@@ -653,14 +750,16 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onDoubleClick={isReadOnly ? undefined : handlers.onDoubleClick}
                     onContextMenu={(e) => {
                         e.preventDefault();
-                        if (!isReadOnly) setContextMenu({ x: e.clientX, y: e.clientY });
+                        if (isReadOnly) return;
+                        const bounds = containerRef.current!.getBoundingClientRect();
+                        setContextMenu({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
                     }}
                 />
 
                 {textEdit.active && (() => {
                     const isShapeEdit = !!(editingElement && isShapeElement(editingElement));
                     const eany = editingElement as any;
-                    
+
                     const elFontSize = eany?.fontSize ?? DEFAULT_FONT_SIZE;
                     const elFontFamily = eany?.fontFamily ?? DEFAULT_FONT_FAMILY;
                     let elTextAlign = eany?.textAlign ?? (isShapeEdit ? 'center' : 'left');
@@ -669,15 +768,15 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     const elTextDecoration = eany?.textDecoration ?? 'none';
                     let lhMultiplier = eany?.lineHeight ?? (isShapeEdit ? 1.3 : 1.25);
 
-                    const screenX = textEdit.x * zoom + panOffset.x;
-                    const screenY = textEdit.y * zoom + panOffset.y;
-                    
+                    const screenX = (editingElement ? editingElement.x + (isShapeEdit ? editingElement.width / 2 : elTextAlign === 'center' ? editingElement.width / 2 : elTextAlign === 'right' ? editingElement.width : 0) : textEdit.x) * zoom + panOffset.x;
+                    const screenY = (editingElement ? editingElement.y + (isShapeEdit ? editingElement.height / 2 : 0) : textEdit.y) * zoom + panOffset.y;
+
                     let leftPos = screenX;
                     let topPos = screenY;
                     let transformStr = '';
                     let fixedWidth: string | undefined;
                     let fixedHeight: string | undefined;
-                    
+
                     if (isShapeEdit) {
                         const padding = 8 * zoom;
                         const w = Math.abs(editingElement!.width) * zoom;
@@ -707,7 +806,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
                     return (
                         <textarea
-                            key={textEdit.editingId ?? `new-${textEdit.x}-${textEdit.y}`}
+                            key={`edit-${textEdit.x}-${textEdit.y}`}
                             ref={textInputRef}
                             rows={1}
                             autoFocus
@@ -716,7 +815,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                                 position: 'absolute',
                                 left: leftPos,
                                 top: topPos,
-                                transform: transformStr || undefined,
+                                transform: `${transformStr} rotate(${editingElement?.angle ?? 0}rad)`,
                                 width: fixedWidth,
                                 height: fixedHeight,
                                 minWidth: fixedWidth ? undefined : 2,
@@ -745,12 +844,12 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                             }}
                             onKeyDown={handleTextKeyDown}
                             onBlur={handleTextBlur}
+                            onCompositionStart={() => { textComposingRef.current = true; }}
+                            onCompositionEnd={e => { textComposingRef.current = false; commitText(e.currentTarget.value, false, textBaseRef.current); textBaseRef.current = e.currentTarget.value; }}
                             onInput={(e) => {
                                 const ta = e.currentTarget;
-                                ta.style.height = '0px';
-                                ta.style.height = ta.scrollHeight + 2 + 'px';
-                                ta.style.width = 'auto';
-                                ta.style.width = Math.max(ta.scrollWidth + 2, 2) + 'px';
+                                if (!(e.nativeEvent as InputEvent).isComposing) { commitText(ta.value, false, textBaseRef.current); textBaseRef.current = ta.value; }
+                                resizeTextInput(ta);
                             }}
                         />
                     );
@@ -758,10 +857,16 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
 
 
 
+                {recoveredText !== null && <div role="alert" style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 'min(360px, calc(100% - 32px))', zIndex: 2000, padding: 14, borderRadius: 10, background: resolvedTheme.panelBg, color: resolvedTheme.panelTextColor, boxShadow: resolvedTheme.toolbarShadow }}>
+                    <strong>Your text is safe here.</strong><p>Editing ended because the object was removed, locked, or your edit permission changed. Copy your text before dismissing.</p>
+                    <textarea readOnly aria-label="Recovered text" value={recoveredText} style={{ width: '100%', boxSizing: 'border-box', minHeight: 80 }} />
+                    <button type="button" onClick={clearRecoveredText}>Dismiss</button>
+                </div>}
                 {!isReadOnly && (
                     <Toolbar
                         slots={slots}
                         position={toolbarPosition}
+                        edgeOffset={toolbarOffset}
                         activeTool={currentTool}
                         onToolSelect={handleToolSelect}
                         activeShape={activeShape}
@@ -796,7 +901,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     onImportJSON={isReadOnly ? undefined : triggerImportJSON}
                     onClearCanvas={isReadOnly ? undefined : handleClearCanvas}
                     onShowShortcuts={handleShowShortcuts}
-                />
+                >
+                    <BoardNavigator elements={elements} viewport={{ panX: panOffset.x, panY: panOffset.y, zoom }} size={size} onFocus={focusElements} onViewport={viewport => { setZoom(viewport.zoom); setPanOffset({ x: viewport.panX, y: viewport.panY }); }} />
+                </SettingsPanel>
 
                 {!isReadOnly && (
                     <PropertiesPanel
@@ -823,6 +930,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 )}
 
                 <ZoomHUD
+                    bottom={zoomBottom}
                     zoom={zoom}
                     onZoomIn={zoomIn}
                     onZoomOut={zoomOut}
@@ -949,7 +1057,7 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                     const localX = contextMenu.x - (containerRect?.left ?? 0);
                     const localY = contextMenu.y - (containerRect?.top ?? 0);
                     return (
-                        <ContextMenu
+                        <ContextMenu bounds={size}
                             x={localX}
                             y={localY}
                             items={items}

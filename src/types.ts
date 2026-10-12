@@ -1,3 +1,5 @@
+import type { BoardImageOptions } from './exportImage';
+import type { HistoryAPI } from './hooks/useHistory';
 import type { ComponentType } from 'react';
 import type { NoteboardBrandColors, NoteboardTheme, NoteboardThemeMode } from './ThemeContext';
 import type { NoteboardElement } from './elements/types';
@@ -32,6 +34,8 @@ export interface ToolbarConfig {
 export interface NoteboardRef {
     /** Returns the live elements array at the time of the call */
     getElements(): NoteboardElement[];
+    /** Select and frame specific objects without changing their content. */
+    focusElements(ids: string[]): void;
     /**
      * Imperatively replace the board elements. Useful for resetting the board
      * or pushing a specific state from outside the component.
@@ -51,10 +55,17 @@ export interface NoteboardRef {
      * Exports the canvas as a data URL.
      * @param format - 'png' (default) or 'jpeg'
      */
-    exportImage(format?: 'png' | 'jpeg'): string;
+    exportImage(format?: 'png' | 'jpeg', options?: BoardImageOptions): string;
+    exportImageAsync(format?: 'png' | 'jpeg', options?: BoardImageOptions): Promise<string>;
 }
 
 export interface NoteboardProps {
+    /** Use the Yjs binding history for collaborative local-user undo. */
+    history?: HistoryAPI;
+    /** Admission limit before an uploaded image is decoded. Default and ceiling: 5 MiB. */
+    maxImageBytes?: number;
+    /** Maximum decoded image pixels. Default and ceiling: 16 million. */
+    maxImagePixels?: number;
     slots?: ToolSlot[];
     toolbarPosition?: ToolbarPosition;
     /** Canvas edge where the properties panel appears (default: 'left') */
@@ -71,8 +82,6 @@ export interface NoteboardProps {
     brandColors?: NoteboardBrandColors;
     /** Fires when a theme mode is selected in the board settings. */
     onThemeChange?: (theme: NoteboardThemeMode) => void;
-
-    // ── View / Edit mode ────────────────────────────────────────
 
     /**
      * Controlled read-only mode. When true the board is view-only:
@@ -97,8 +106,6 @@ export interface NoteboardProps {
      */
     onViewportChange?: (viewport: NoteboardViewport) => void;
 
-    // ── Persistence & multiplayer ──────────────────────────────
-
     /**
      * Seed elements on first mount (e.g. loaded from your DB).
      * Ignored after initial render — use `elements` for fully controlled mode.
@@ -122,7 +129,7 @@ export interface NoteboardProps {
      * Fires after every draw, edit, move or delete action.
      * Use this to broadcast changes via WebSocket or debounce-save to your DB.
      */
-    onElementsChange?: (elements: NoteboardElement[]) => void;
+    onElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => void;
     /**
      * Fires when the user clicks the Save button (only shown when this prop is provided).
      * Receives a fully serialized NoteboardSession ready to store in a DB.

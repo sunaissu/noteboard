@@ -14,13 +14,9 @@ import { applyDropShadow, clearDropShadow, getCachedImage } from './utils';
 import { renderRectangle, renderEllipse, renderDiamond, renderTriangle, renderShapeText } from './renderShapes';
 import { renderLine, renderArrow, renderPen, renderLineMidLabel } from './renderLinear';
 import { renderStickyNote, renderFrame, renderStar, renderCallout } from './renderNew';
-
-// ─── Canvas clear ─────────────────────────────────────────────
 export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number) {
     ctx.clearRect(0, 0, width, height);
 }
-
-// ─── Standalone text ──────────────────────────────────────────────
 function renderText(
     ctx: CanvasRenderingContext2D,
     element: NoteboardElement & { text: string; fontSize: number; fontFamily: string; textAlign: string; lineHeight?: number; highlightColor?: string; fontWeight?: string; fontStyle?: string; textDecoration?: string },
@@ -63,8 +59,6 @@ function renderText(
         }
     }
 }
-
-// ─── Image ────────────────────────────────────────────────────
 function renderImage(
     ctx: CanvasRenderingContext2D,
     element: ImageElement,
@@ -73,7 +67,7 @@ function renderImage(
     const { x, y, width, height, dataUrl, id } = element;
     if (!dataUrl) return;
     const { image, status } = getCachedImage(dataUrl, id, onImageSettled);
-    if (status === 'loaded' || (image.complete && image.naturalWidth > 0)) {
+    if (status === 'loaded') {
         ctx.drawImage(image, x, y, width, height);
     } else {
         ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x, y, width, height);
@@ -83,8 +77,6 @@ function renderImage(
         ctx.fillText(status === 'error' ? 'Image unavailable' : 'Loading...', x + width / 2, y + height / 2);
     }
 }
-
-// ─── Main Switch ──────────────────────────────────────────────
 export function renderElement(
     ctx: CanvasRenderingContext2D,
     element: NoteboardElement,
@@ -119,7 +111,7 @@ export function renderElement(
         case 'draw':      renderLine(ctx, element); break;
         case 'pen':       renderPen(ctx, element); break;
         case 'arrow':     renderArrow(ctx, element); break;
-        case 'text':      
+        case 'text':
             if (!excludeText) { clearDropShadow(ctx); renderText(ctx, element as any); }
             break;
         case 'image':     renderImage(ctx, element as ImageElement, onImageSettled); break;
@@ -147,8 +139,6 @@ export function renderElement(
 
     ctx.restore();
 }
-
-// ─── Batch render ─────────────────────────────────────────────
 export function renderElements(
     ctx: CanvasRenderingContext2D,
     elements: readonly NoteboardElement[],

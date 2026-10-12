@@ -1,4 +1,3 @@
-// ─── Primitives ──────────────────────────────────────────────
 
 export interface Point {
     x: number;
@@ -36,8 +35,6 @@ export interface ElementBinding {
     elementId: string;
     fixedPoint: Point;
 }
-
-// ─── Base Element ────────────────────────────────────────────
 
 export interface NoteboardElementBase {
     id: string;
@@ -77,9 +74,6 @@ export interface NoteboardElementBase {
     dropShadow?: DropShadow;
     blendMode?: BlendMode;
 }
-
-// ─── Concrete Element Types ──────────────────────────────────
-
 export interface ShapeTextFields {
     /** Optional inline text displayed inside the shape */
     text?: string;
@@ -183,9 +177,6 @@ export interface ImageElement extends NoteboardElementBase {
     /** Base64 data URL of the image */
     dataUrl: string;
 }
-
-// ─── Phase 2 Element Types ────────────────────────────────────
-
 /** Sticky-note: a colored card with auto-sizing text */
 export interface StickyNoteElement extends NoteboardElementBase, ShapeTextFields {
     type: 'sticky-note';
@@ -218,9 +209,6 @@ export interface CalloutElement extends NoteboardElementBase, ShapeTextFields {
     type: 'callout';
     tailDirection: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
 }
-
-// ─── Union ────────────────────────────────────────────────
-
 export type NoteboardElement =
     | RectangleElement
     | EllipseElement
@@ -236,9 +224,6 @@ export type NoteboardElement =
     | StarElement
     | StickyNoteElement
     | CalloutElement;
-
-// ─── Helper guards ───────────────────────────────────────────
-
 export function isLinearElement(
     el: NoteboardElement,
 ): el is LineElement | ArrowElement | DrawElement | PenElement {

@@ -45,14 +45,14 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Font Size</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <button onClick={() => onUpdate({ fontSize: Math.max(8, fontSize - 2) } as any)}
+                    <button type="button" onClick={() => onUpdate({ fontSize: Math.max(8, fontSize - 2) } as any)}
                         style={{ width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer', background: theme.buttonHoverBg, color: theme.panelTextColor, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         −
                     </button>
                     <input type="number" min={8} max={120} value={fontSize}
                         onChange={(e) => onUpdate({ fontSize: Number(e.target.value) } as any)}
                         style={{ width: 48, height: 28, borderRadius: 6, border: theme.panelBorder, background: 'transparent', color: theme.panelTextColor, textAlign: 'center', fontSize: 12, fontWeight: 500, outline: 'none' }} />
-                    <button onClick={() => onUpdate({ fontSize: Math.min(120, fontSize + 2) } as any)}
+                    <button type="button" onClick={() => onUpdate({ fontSize: Math.min(120, fontSize + 2) } as any)}
                         style={{ width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer', background: theme.buttonHoverBg, color: theme.panelTextColor, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         +
                     </button>
@@ -80,16 +80,16 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Style</span>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                    <button title="Bold"
+                    <button type="button" title="Bold"
                         onClick={() => onUpdate({ fontWeight: fontWeight === 'bold' ? 'normal' : 'bold' } as any)}
                         style={{ ...ibStyle(fontWeight === 'bold'), fontWeight: 700, fontSize: 13 }}>B</button>
-                    <button title="Italic"
+                    <button type="button" title="Italic"
                         onClick={() => onUpdate({ fontStyle: fontStyle === 'italic' ? 'normal' : 'italic' } as any)}
                         style={{ ...ibStyle(fontStyle === 'italic'), fontStyle: 'italic', fontSize: 13 }}>I</button>
-                    <button title="Underline"
+                    <button type="button" title="Underline"
                         onClick={() => onUpdate({ textDecoration: textDecoration === 'underline' ? 'none' : 'underline' } as any)}
                         style={{ ...ibStyle(textDecoration === 'underline'), textDecoration: 'underline', fontSize: 13 }}>U</button>
-                    <button title="Strikethrough"
+                    <button type="button" title="Strikethrough"
                         onClick={() => onUpdate({ textDecoration: textDecoration === 'line-through' ? 'none' : 'line-through' } as any)}
                         style={{ ...ibStyle(textDecoration === 'line-through'), textDecoration: 'line-through', fontSize: 13 }}>S</button>
                 </div>
@@ -108,7 +108,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     ].map((opt) => {
                         const Icon = opt.icon;
                         return (
-                            <button key={opt.value} title={opt.title}
+                            <button type="button" key={opt.value} title={opt.title}
                                 onClick={() => onUpdate({ textAlign: opt.value } as any)}
                                 style={ibStyle(textAlign === opt.value)}>
                                 <Icon size={16} weight="bold" />
@@ -135,7 +135,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                     {HIGHLIGHT_COLORS.map((c) => (
-                        <button key={c}
+                        <button type="button" key={c}
                             onClick={() => onUpdate({ highlightColor: c || undefined } as any)}
                             title={c || 'None'}
                             style={{

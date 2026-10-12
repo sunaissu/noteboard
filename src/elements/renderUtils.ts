@@ -1,8 +1,5 @@
 import type { Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
-
-// ─── Absolute Coordinates ────────────────────────────────────
-
 /**
  * Get the absolute coordinate extents of an element, handling
  * negative width/height gracefully.
@@ -36,9 +33,6 @@ export function getElementAbsoluteCoords(
         Math.max(y, y + height),
     ];
 }
-
-// ─── Center Point ────────────────────────────────────────────
-
 /** Get the center of an element. */
 export function getCenterPoint(element: NoteboardElement): Point {
     const [x1, y1, x2, y2] = getElementAbsoluteCoords(element);
@@ -47,9 +41,6 @@ export function getCenterPoint(element: NoteboardElement): Point {
         y: (y1 + y2) / 2,
     };
 }
-
-// ─── Line / Arrow Absolute Points ────────────────────────────
-
 /**
  * Convert the relative points of a linear element to absolute
  * screen-space coordinates.
@@ -62,9 +53,6 @@ export function getLinearElementAbsolutePoints(
         y: element.y + p.y,
     }));
 }
-
-// ─── Arrowhead Geometry  ─────────────────────────────────────
-
 /**
  * Compute the three vertices of an arrowhead triangle at `tip`,
  * pointing away from the line at `angle`.

@@ -9,8 +9,6 @@ import {
     ROTATION_HANDLE_OFFSET,
 } from '../constants';
 
-// ─── Type definitions shared between canvas hook files ────────
-
 export type HandlePosition = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 export type InteractionMode = 'none' | 'resize' | 'rotate';
 
@@ -19,8 +17,6 @@ export interface Handle {
     x: number;
     y: number;
 }
-
-// ─── Selection bounds ────────────────────────────────────────
 
 export function getSelectionBounds(
     elements: NoteboardElement[],
@@ -39,8 +35,6 @@ export function getSelectionBounds(
     }
     return [minX, minY, maxX, maxY];
 }
-
-// ─── Resize/rotation handles ─────────────────────────────────
 
 export function getHandles(bounds: Bounds, angle: number = 0, cx?: number, cy?: number): Handle[] {
     const [x1, y1, x2, y2] = bounds;
@@ -89,8 +83,6 @@ export function getCursorForHandle(handle: Handle): string {
     }
 }
 
-// ─── Z-ordering ──────────────────────────────────────────────
-
 export function bringToFront(elements: NoteboardElement[], ids: Set<string>): NoteboardElement[] {
     return [...elements.filter((el) => !ids.has(el.id)), ...elements.filter((el) => ids.has(el.id))];
 }
@@ -119,8 +111,6 @@ export function moveBackward(elements: NoteboardElement[], ids: Set<string>): No
     return result;
 }
 
-// ─── Grouping ────────────────────────────────────────────────
-
 export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<string>): Set<string> {
     const expanded = new Set(
         [...ids].filter((id) => {
@@ -138,8 +128,6 @@ export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<s
     }
     return expanded;
 }
-
-// ─── Tool classification ────────────────────────────────────────────
 
 export type DrawTool = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'line' | 'arrow' | 'pen' | 'sticky-note' | 'star' | 'callout';
 

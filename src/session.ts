@@ -95,7 +95,7 @@ const validateTextStyleFields = (value: Record<string, unknown>, index: number) 
     }
 };
 
-const normalizeImportedElement = (value: unknown, index: number): NoteboardElement => {
+export const normalizeImportedElement = (value: unknown, index: number): NoteboardElement => {
     if (!isRecord(value)) throw new TypeError(`Element ${index + 1} must be an object`);
     if (typeof value.id !== 'string' || !value.id || value.id.length > 256) {
         throw new TypeError(`Element ${index + 1} has an invalid ID`);
@@ -230,10 +230,13 @@ const normalizeImportedElement = (value: unknown, index: number): NoteboardEleme
         throw new TypeError(`Element ${index + 1} has an invalid callout direction`);
     }
     if (type === 'image') {
+        const payload = typeof value.dataUrl === 'string' ? value.dataUrl.slice(value.dataUrl.indexOf(',') + 1) : '';
         if (
             typeof value.dataUrl !== 'string'
             || value.dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH
-            || !/^data:image\/[a-z0-9.+-]+;base64,/i.test(value.dataUrl)
+            || !/^data:image\/(png|jpeg|gif|webp);base64,/i.test(value.dataUrl)
+            || payload.length % 4 !== 0
+            || !/^[a-z0-9+/]+={0,2}$/i.test(payload)
         ) {
             throw new TypeError(`Element ${index + 1} has invalid image data`);
         }
@@ -243,8 +246,6 @@ const normalizeImportedElement = (value: unknown, index: number): NoteboardEleme
     // field remain renderable, while retaining their serialized values.
     return createElement(type, value as Partial<NoteboardElement>);
 };
-
-// ─── Session type ─────────────────────────────────────────────
 // Plain JSON — stores directly in any DB (Postgres JSONB, MongoDB,
 // Firebase, SQLite, etc.) with no transformation needed.
 
@@ -268,8 +269,6 @@ export interface NoteboardSession {
     /** Viewport so viewers join at the same pan/zoom position */
     viewport: NoteboardViewport;
 }
-
-// ─── Serialize ────────────────────────────────────────────────
 
 export interface SerializeMeta {
     threadId: string;
@@ -296,8 +295,6 @@ export function serializeBoard(
         viewport: { ...viewport },
     };
 }
-
-// ─── Deserialize ──────────────────────────────────────────────
 
 export interface DeserializedBoard {
     elements: NoteboardElement[];

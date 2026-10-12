@@ -21,7 +21,7 @@ import type { NoteboardViewport } from '../session';
 import { createElement, generateId } from '../elements/createElement';
 import { duplicateElements } from '../elements/mutateElement';
 import { hitTestElement, getElementsInBounds } from '../elements/hitTest';
-import { getElementBounds, rotatePoint } from '../elements/bounds';
+import { getElementBounds, getPointsBounds, rotatePoint } from '../elements/bounds';
 import {
     CONNECTOR_SNAP_DISTANCE,
     findBinding,
@@ -29,7 +29,7 @@ import {
 } from '../elements/connectorBinding';
 import type { ConnectorSnapResult } from '../elements/connectorBinding';
 import { renderElement } from '../renderer';
-import { useHistory } from './useHistory';
+import { useHistory, type HistoryAPI } from './useHistory';
 import {
     DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_LINE_HEIGHT,
     SELECTION_COLOR, HIT_TEST_THRESHOLD, SELECTION_PAD,
@@ -46,11 +46,7 @@ import {
     shouldCommitDrawnElement,
 } from './canvasUtils';
 import type { Handle, HandlePosition, InteractionMode } from './canvasUtils';
-
-// ─── Re-export for external callers ──────────────────────────
 export type { Handle, HandlePosition, InteractionMode };
-
-// ─── Local type guard ─────────────────────────────────────────
 function isTextElement(el: NoteboardElement): el is TextElement {
     return el.type === 'text';
 }
@@ -63,9 +59,8 @@ const normalizeViewport = (viewport?: NoteboardViewport): NoteboardViewport => (
         : 1,
 });
 
-// ─── Public interfaces ────────────────────────────────────────
-
 interface UseCanvasDrawingOptions {
+    history?: HistoryAPI;
     activeTool: Tool;
     width: number;
     height: number;
@@ -78,6 +73,7 @@ interface UseCanvasDrawingOptions {
     /** Scope global keyboard and paste shortcuts to the active board. */
     keyboardEnabled?: boolean;
     onImageInsertRequest?: (x: number, y: number) => void;
+    onImagePaste?: (file: File) => void;
     /** Seed elements on first mount (from DB load). Uncontrolled — ignored after mount. */
     initialElements?: NoteboardElement[];
     /** Seed viewport on first mount (from a saved NoteboardSession). */
@@ -94,7 +90,7 @@ interface UseCanvasDrawingOptions {
      * Called after every local mutation (draw, edit, move or delete action).
      * Wire this to your WebSocket broadcast or DB auto-save.
      */
-    onElementsChange?: (elements: NoteboardElement[]) => void;
+    onElementsChange?: (elements: NoteboardElement[], previous: NoteboardElement[]) => void;
     /** Called after every pan or zoom. */
     onViewportChange?: (viewport: NoteboardViewport) => void;
     /** Whether snap-to-grid is enabled (controlled externally). */
@@ -111,20 +107,14 @@ export interface TextEditState {
     initialText: string;
 }
 
-// ═════════════════════════════════════════════════════════════
-// ═══ MAIN HOOK ═══════════════════════════════════════════════
-// ═════════════════════════════════════════════════════════════
-
 export function useCanvasDrawing({
     activeTool, width, height, canvasBg, strokeColor,
     primaryColor = SELECTION_COLOR, primaryOverlay = MARQUEE_FILL, isDark, readOnly = false,
-    keyboardEnabled = true,
+    keyboardEnabled = true, history: externalHistory,
     initialElements, initialViewport, externalElements, externalViewport, onElementsChange,
     onViewportChange,
-    snapEnabled = false, showGrid = false, onImageInsertRequest,
+    snapEnabled = false, showGrid = false, onImageInsertRequest, onImagePaste,
 }: UseCanvasDrawingOptions) {
-
-    // ─── 1. STATE & REFS ────────────────────────────────────────
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [elements, setElementsRaw] = useState<NoteboardElement[]>(
@@ -153,6 +143,8 @@ export function useCanvasDrawing({
         }
     }, [externalElements]);
 
+    const onImagePasteRef = useRef(onImagePaste);
+    onImagePasteRef.current = onImagePaste;
     const onElementsChangeRef = useRef(onElementsChange);
     onElementsChangeRef.current = onElementsChange;
 
@@ -160,7 +152,7 @@ export function useCanvasDrawing({
     onViewportChangeRef.current = onViewportChange;
 
     const setElements = useCallback(
-        (updater: NoteboardElement[] | ((prev: NoteboardElement[]) => NoteboardElement[])) => {
+        (updater: NoteboardElement[] | ((prev: NoteboardElement[]) => NoteboardElement[]), base?: NoteboardElement[]) => {
             const previous = elementsRef.current;
             const candidate = typeof updater === 'function' ? updater(previous) : updater;
             const next = updateBoundElements(candidate);
@@ -168,7 +160,7 @@ export function useCanvasDrawing({
 
             elementsRef.current = next;
             setElementsRaw(next);
-            onElementsChangeRef.current?.(next);
+            onElementsChangeRef.current?.(next, base ?? previous);
         },
         [],
     );
@@ -244,6 +236,7 @@ export function useCanvasDrawing({
     const isErasingRef = useRef(false);
     const eraserHistoryRecordedRef = useRef(false);
     const currentElementRef = useRef<NoteboardElement | null>(null);
+    const penBoundsRef = useRef([0, 0, 0, 0]);
     // A short click with a line/arrow anchors its tail. The draft remains live
     // until a second click places a sufficiently distant endpoint.
     const pendingLinearRef = useRef(false);
@@ -257,7 +250,8 @@ export function useCanvasDrawing({
     const pointerUpHandledRef = useRef(false);
 
     // History and clipboard
-    const history = useHistory();
+    const localHistory = useHistory();
+    const history = externalHistory ?? localHistory;
     const clipboardRef = useRef<NoteboardElement[]>([]);
 
     // Resize / rotation
@@ -268,8 +262,6 @@ export function useCanvasDrawing({
     const rotationCenterRef = useRef<Point>({ x: 0, y: 0 });
     const rotationStartAngleRef = useRef(0);
     const rotationStartElementAnglesRef = useRef<Map<string, number>>(new Map());
-
-    // ─── 2. COORDINATE HELPERS ──────────────────────────────────
 
     const toCanvas = useCallback((clientX: number, clientY: number): Point => {
         const canvas = canvasRef.current;
@@ -306,8 +298,6 @@ export function useCanvasDrawing({
             default:       canvas.style.cursor = 'crosshair'; break;
         }
     }, [activeTool, readOnly]);
-
-    // ── Connector snap helpers ────────────────────────────────────
     const snapRef = useRef<ConnectorSnapResult | null>(null);
 
     const findSnapTarget = useCallback((point: Point, excludeId?: string) => (
@@ -335,8 +325,6 @@ export function useCanvasDrawing({
         } as NoteboardElement;
     }, [findSnapTarget, snapEnabled]);
 
-    // ─── 3. REPAINT ─────────────────────────────────────────────
-
     const repaintRef = useRef<() => void>(() => undefined);
     const imageRepaintFrameRef = useRef<number | null>(null);
     const imageRepaintActiveRef = useRef(true);
@@ -356,8 +344,9 @@ export function useCanvasDrawing({
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
+        const pixelWidth = Math.round(width * dpr), pixelHeight = Math.round(height * dpr);
+        if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+        if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
 
         ctx.save();
         ctx.scale(dpr, dpr);
@@ -646,8 +635,6 @@ export function useCanvasDrawing({
             : current);
     }, [cancelPointerInteraction, readOnly]);
 
-    // ─── 4. KEYBOARD SHORTCUTS ──────────────────────────────────
-
     useEffect(() => {
         if (!keyboardEnabled) return;
         const onKeyDown = (e: KeyboardEvent) => {
@@ -726,7 +713,6 @@ export function useCanvasDrawing({
                 setElements((prev) => { history.record(prev); return prev.map((el) => editableSelectedIds.has(el.id) ? { ...el, groupId: undefined } : el); });
                 return;
             }
-            // ── Nudge selected elements with arrow keys ────────────────────
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && editableSelectedIds.size > 0) {
                 e.preventDefault();
                 const step = e.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
@@ -735,15 +721,11 @@ export function useCanvasDrawing({
                 setElements((prev) => { history.record(prev); return prev.map((el) => editableSelectedIds.has(el.id) ? { ...el, x: el.x + dx, y: el.y + dy } : el); });
                 return;
             }
-
-            // ── Escape: deselect + cancel text edit ───────────────────────
             if (e.key === 'Escape') {
                 cancelCurrentDrawing();
                 setSelectedIds(new Set());
                 return;
             }
-
-            // ── Ctrl+0: fit all elements ──────────────────────────────────
             if (isCtrl && e.key === '0') {
                 e.preventDefault();
                 const active = elementsRef.current.filter((el) => !el.isDeleted);
@@ -762,8 +744,6 @@ export function useCanvasDrawing({
                 setPanOffset({ x: pad - bx1 * newZoom, y: pad - by1 * newZoom });
                 return;
             }
-
-            // ── Ctrl+Shift+H or Ctrl+Shift+F: fit selection ───────────────
             if (isCtrl && e.shiftKey && (e.key === 'H' || e.key === 'F') && selectedIds.size > 0) {
                 e.preventDefault();
                 const sel = elementsRef.current.filter((el) => selectedIds.has(el.id) && !el.isDeleted);
@@ -788,8 +768,6 @@ export function useCanvasDrawing({
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [selectedIds, textEdit.active, elements, history, width, height, cancelCurrentDrawing, keyboardEnabled]);
 
-    // ─── 5. IMAGE PASTE ─────────────────────────────────────────
-
     useEffect(() => {
         if (!keyboardEnabled) return;
         const onPaste = (e: ClipboardEvent) => {
@@ -801,25 +779,7 @@ export function useCanvasDrawing({
                     e.preventDefault();
                     const file = item.getAsFile();
                     if (!file) continue;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        if (readOnlyRef.current) return;
-                        const dataUrl = reader.result as string;
-                        const img = new Image();
-                        img.onload = () => {
-                            if (readOnlyRef.current) return;
-                            let w = img.naturalWidth, h = img.naturalHeight;
-                            const maxDim = 400;
-                            if (w > maxDim || h > maxDim) { const scale = maxDim / Math.max(w, h); w *= scale; h *= scale; }
-                            const cx = (width / 2 - panOffset.x) / zoom;
-                            const cy = (height / 2 - panOffset.y) / zoom;
-                            const imageEl = createElement('image', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, dataUrl } as any);
-                            setElements((prev) => { history.record(prev); return [...prev, imageEl]; });
-                            setSelectedIds(new Set([imageEl.id]));
-                        };
-                        img.src = dataUrl;
-                    };
-                    reader.readAsDataURL(file);
+                    onImagePasteRef.current?.(file);
                     break;
                 }
             }
@@ -827,8 +787,6 @@ export function useCanvasDrawing({
         window.addEventListener('paste', onPaste);
         return () => window.removeEventListener('paste', onPaste);
     }, [textEdit.active, width, height, panOffset, zoom, history, keyboardEnabled]);
-
-    // ─── 6. POINTER DOWN ────────────────────────────────────────
 
     const onPointerDown = useCallback(
         (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1030,6 +988,7 @@ export function useCanvasDrawing({
             }
 
             drawingRef.current = true;
+            penBoundsRef.current = [0, 0, 0, 0];
             rawStartPointRef.current = cp;
             rawEndPointRef.current = cp;
 
@@ -1069,13 +1028,9 @@ export function useCanvasDrawing({
         [activeTool, cancelCurrentDrawing, elements, findSnapTarget, panOffset, repaint, selectedIds, snapEnabled, strokeColor, updateLinearDraftEndpoint, zoom, toCanvas, toScreen],
     );
 
-    // ─── 7. POINTER MOVE ────────────────────────────────────────
-
     const onPointerMove = useCallback(
         (e: React.PointerEvent<HTMLCanvasElement>) => {
             const canvas = canvasRef.current;
-
-            // ── Cursor management (idle select mode only) ──────────────────
             // Update the canvas cursor to reflect the handle currently under the pointer.
             // This must run before any early-returns so it stays responsive.
             if (canvas && readOnlyRef.current) {
@@ -1227,7 +1182,7 @@ export function useCanvasDrawing({
                             const endpoint = endpointSnap?.point ?? rawEndpoint;
                             snapRef.current = endpointSnap;
                             setElements((prev) => prev.map((el) => {
-                                if (el.id !== original.id) return el;
+                                if (el.id !== original.id || isLockedElement(el)) return el;
                                 const newPts = [...pts];
                                 if (pos === 'nw') {
                                     const lastWorld = { x: original.x + pts[pts.length - 1].x, y: original.y + pts[pts.length - 1].y };
@@ -1260,10 +1215,8 @@ export function useCanvasDrawing({
                     // Draw/pen: use actual AABB for scale
                     let ow = Math.abs(original.width), oh = Math.abs(original.height);
                     if ((original.type === 'draw' || original.type === 'pen') && original.points.length > 1) {
-                        const xs = original.points.map((p: Point) => p.x);
-                        const ys = original.points.map((p: Point) => p.y);
-                        ow = Math.max(...xs) - Math.min(...xs);
-                        oh = Math.max(...ys) - Math.min(...ys);
+                        const [x1, y1, x2, y2] = getPointsBounds(original.points);
+                        ow = x2 - x1; oh = y2 - y1;
                     }
                     if (ow === 0 && oh === 0) return;
 
@@ -1303,14 +1256,14 @@ export function useCanvasDrawing({
                     const dx = anchorWorld.x - newAnchorWorld.x, dy = anchorWorld.y - newAnchorWorld.y;
 
                     setElements((prev) => prev.map((el) => {
-                        if (el.id !== original.id) return el;
+                        if (el.id !== original.id || isLockedElement(el)) return el;
                         const updates: Record<string, unknown> = {
                             x: newLocalX + dx, y: newLocalY + dy,
                             width: absW * Math.sign(original.width || 1),
                             height: absH * Math.sign(original.height || 1),
                         };
                         if (isLinearElement(original) && ow > 0 && oh > 0) {
-                            updates.points = original.points.map((p: Point) => ({ x: p.x * (absW / ow), y: p.y * (absH / oh) }));
+                            updates.points = original.points.map((p: Point) => ({ ...p, x: p.x * (absW / ow), y: p.y * (absH / oh) }));
                         }
                         return { ...el, ...updates } as NoteboardElement;
                     }));
@@ -1342,7 +1295,7 @@ export function useCanvasDrawing({
                         y: originY + (orig.y - originY) * scaleY,
                         width: orig.width * scaleX, height: orig.height * scaleY,
                     };
-                    if (isLinearElement(orig)) updates.points = orig.points.map((p: Point) => ({ x: p.x * scaleX, y: p.y * scaleY }));
+                    if (isLinearElement(orig)) updates.points = orig.points.map((p: Point) => ({ ...p, x: p.x * scaleX, y: p.y * scaleY }));
                     return { ...el, ...updates } as NoteboardElement;
                 }));
                 return;
@@ -1391,16 +1344,18 @@ export function useCanvasDrawing({
                 updateLinearDraftEndpoint(cp);
             } else if (el.type === 'pen' && isLinearElement(el)) {
                 const newPoint: any = { x: cp.x - start.x, y: cp.y - start.y, pressure: e.pressure ?? 0.5 };
-                const allPts = [...el.points, newPoint];
-                const xs = allPts.map((p: any) => p.x), ys = allPts.map((p: any) => p.y);
-                currentElementRef.current = { ...el, points: allPts, width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) } as NoteboardElement;
+                if (el.points.length >= 100_000) return;
+                // Draft points are private until pointer-up publishes the element.
+                el.points.push(newPoint);
+                const bounds = penBoundsRef.current;
+                bounds[0] = Math.min(bounds[0], newPoint.x); bounds[1] = Math.min(bounds[1], newPoint.y);
+                bounds[2] = Math.max(bounds[2], newPoint.x); bounds[3] = Math.max(bounds[3], newPoint.y);
+                currentElementRef.current = { ...el, width: bounds[2] - bounds[0], height: bounds[3] - bounds[1] };
             }
             repaint();
         },
         [activeTool, snapEnabled, zoom, repaint, panOffset, selectedIds, toCanvas, toScreen, findSnapTarget, history, updateLinearDraftEndpoint],
     );
-
-    // ─── 8. POINTER UP ──────────────────────────────────────────
 
     const onPointerUp = useCallback(() => {
         pointerUpHandledRef.current = true; // Tell window fallback this event was handled
@@ -1446,8 +1401,6 @@ export function useCanvasDrawing({
         if (!drawingRef.current) return;
         finishCurrentDrawing();
     }, [elements, finishCurrentDrawing, repaint]);
-
-    // ─── Global pointer-up fallback ─────────────────────────────
     // ONLY runs when the canvas React onPointerUp did NOT fire (pointer capture
     // was lost and the release happened outside the canvas). For all normal
     // within-canvas interactions the canvas handler sets pointerUpHandledRef=true
@@ -1509,11 +1462,10 @@ export function useCanvasDrawing({
         return () => window.removeEventListener('pointerup', onWindowPointerUp);
     }, [finishCurrentDrawing, repaint]);
 
-    // ─── 9. WHEEL (pan & zoom) ──────────────────────────────────
-
     const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
-        e.preventDefault();
+        if (!e.defaultPrevented) e.preventDefault();
         if (e.ctrlKey || e.metaKey) {
+            if (e.deltaY === 0) return;
             const canvas = canvasRef.current;
             if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
@@ -1534,35 +1486,42 @@ export function useCanvasDrawing({
             });
             return;
         }
-        const dx = e.shiftKey ? e.deltaY : e.deltaX, dy = e.shiftKey ? 0 : e.deltaY;
-        setPanOffset((prev) => ({ x: prev.x - dx, y: prev.y - dy }));
+        const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX, dy = e.shiftKey ? 0 : e.deltaY;
+        const unitX = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? canvasRef.current?.clientWidth || 1 : 1;
+        const unitY = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? canvasRef.current?.clientHeight || 1 : 1;
+        setPanOffset((prev) => ({ x: prev.x - dx * unitX, y: prev.y - dy * unitY }));
     }, []);
 
-    // ─── 10. TEXT COMMIT ────────────────────────────────────────
-
-    const commitText = useCallback((text: string) => {
+    const [recoveredText, setRecoveredText] = useState<string | null>(null);
+    const textHistoryRecorded = useRef(false);
+    useEffect(() => { if (!textEdit.active) textHistoryRecorded.current = false; }, [textEdit.active]);
+    const commitText = useCallback((text: string, finish = true, baseText?: string) => {
         if (readOnlyRef.current) {
-            setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
+            setRecoveredText(text);
+            if (finish) setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
             return;
         }
         const editingEl = textEdit.editingId
             ? elementsRef.current.find((element) => element.id === textEdit.editingId) ?? null
             : null;
-        if (editingEl && isLockedElement(editingEl)) {
+        if (textEdit.editingId && (!editingEl || editingEl.isDeleted || isLockedElement(editingEl))) {
+            setRecoveredText(text);
             setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
             return;
         }
-        const trimmed = text.replace(/\n+$/, '');
-        if (!trimmed.trim()) {
+        const updateTextElements = (updater: (previous: NoteboardElement[]) => NoteboardElement[]) => setElements(updater,
+            baseText !== undefined && textEdit.editingId ? elementsRef.current.map(element => element.id === textEdit.editingId ? { ...element, text: baseText } as NoteboardElement : element) : undefined);
+        const trimmed = text;
+        if (finish && !trimmed.trim()) {
             if (textEdit.editingId) {
                 const editingEl = elementsRef.current.find((e) => e.id === textEdit.editingId);
                 if (editingEl && isShapeElement(editingEl)) {
-                    setElements((prev) => { history.record(prev); return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: '' } as any : e); });
+                    updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: '' } as any : e); });
                 } else {
-                    setElements((prev) => { history.record(prev); return prev.map((e) => e.id === textEdit.editingId ? { ...e, isDeleted: true } : e); });
+                    updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return prev.map((e) => e.id === textEdit.editingId ? { ...e, isDeleted: true } : e); });
                 }
             }
-            setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
+            if (finish) setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
             return;
         }
 
@@ -1572,8 +1531,8 @@ export function useCanvasDrawing({
             const shapeEl = editingEl as RectangleElement;
             fontSize = shapeEl.fontSize ?? DEFAULT_FONT_SIZE;
             fontFamily = shapeEl.fontFamily ?? DEFAULT_FONT_FAMILY;
-            setElements((prev) => { history.record(prev); return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: trimmed } as any : e); });
-            setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
+            updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: trimmed } as any : e); });
+            if (finish) setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
             return;
         }
 
@@ -1584,27 +1543,26 @@ export function useCanvasDrawing({
             fontSize = DEFAULT_FONT_SIZE; fontFamily = DEFAULT_FONT_FAMILY;
         }
 
-        const lineHeight = fontSize * DEFAULT_LINE_HEIGHT;
+        const lineHeight = fontSize * ((editingEl as TextElement | null)?.lineHeight ?? DEFAULT_LINE_HEIGHT);
         const lines = trimmed.split('\n');
         let maxWidth = 0;
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
-            if (ctx) { ctx.font = `${fontSize}px ${fontFamily}`; for (const line of lines) { const m = ctx.measureText(line); if (m.width > maxWidth) maxWidth = m.width; } }
+            if (ctx) { ctx.font = `${(editingEl as TextElement | null)?.fontStyle ?? "normal"} ${(editingEl as TextElement | null)?.fontWeight ?? "normal"} ${fontSize}px ${fontFamily}`; for (const line of lines) { const m = ctx.measureText(line); if (m.width > maxWidth) maxWidth = m.width; } }
         }
         if (maxWidth === 0) maxWidth = text.length * 10;
         const measuredHeight = Math.max(lineHeight, lines.length * lineHeight);
 
         if (textEdit.editingId) {
-            setElements((prev) => { history.record(prev); return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: trimmed, width: maxWidth, height: measuredHeight } as any : e); });
+            updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: trimmed, width: maxWidth, height: measuredHeight } as any : e); });
         } else {
             const el = createElement('text', { x: textEdit.x, y: textEdit.y, text: trimmed, fontSize, fontFamily, width: maxWidth, height: measuredHeight, ...(strokeColor ? { strokeColor } : {}) } as any);
-            setElements((prev) => { history.record(prev); return [...prev, el]; });
+            updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return [...prev, el]; });
+            if (!finish) setTextEdit({ ...textEdit, editingId: el.id });
         }
-        setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
+        if (finish) setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
     }, [textEdit, history]);
-
-    // ─── 11. DOUBLE-CLICK (text edit) ───────────────────────────
 
     const onDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if ((activeTool !== 'select' && activeTool !== 'text') || drawingRef.current || pendingLinearRef.current) return;
@@ -1627,8 +1585,6 @@ export function useCanvasDrawing({
             }
         }
     }, [activeTool, elements, panOffset, zoom, toCanvas]);
-
-    // ── Zoom controls for ZoomHUD ─────────────────────────────
     const zoomIn = useCallback(() => {
         setZoom((z) => Math.min(MAX_ZOOM, z * ZOOM_STEP));
     }, []);
@@ -1659,8 +1615,6 @@ export function useCanvasDrawing({
         setPanOffset({ x: pad - bx1 * newZoom, y: pad - by1 * newZoom });
     }, [width, height]);
 
-    // ─── RETURN ──────────────────────────────────────────────────
-
     const onPointerLeave = useCallback(() => {
         const canvas = canvasRef.current;
         if (canvas) canvas.style.cursor = readOnlyRef.current || activeTool === 'pan' ? 'grab' : 'default';
@@ -1675,7 +1629,7 @@ export function useCanvasDrawing({
     return {
         canvasRef, elements, setElements,
         selectedIds, setSelectedIds,
-        textEdit, commitText,
+        textEdit, commitText, recoveredText, clearRecoveredText: () => setRecoveredText(null),
         panOffset, setPanOffset, zoom, setZoom,
         history,
         zoomIn, zoomOut, zoomReset, fitAll,

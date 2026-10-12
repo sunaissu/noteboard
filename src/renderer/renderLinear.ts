@@ -1,8 +1,6 @@
 import type { Point, NoteboardElement, LineElement, ArrowElement, PenElement, PressurePoint } from '../elements/types';
 import { getLinearElementAbsolutePoints, getArrowheadPoints, getLineAngle } from '../elements/renderUtils';
 import { seededRandom, jitterPoint, drawJitteredLine } from './utils';
-
-// ─── Orthogonal (elbow) routing ──────────────────────────────
 function renderOrthogonalLine(ctx: CanvasRenderingContext2D, pts: Point[]) {
     if (pts.length < 2) return;
     const p0 = pts[0], pn = pts[pts.length - 1];
@@ -12,8 +10,6 @@ function renderOrthogonalLine(ctx: CanvasRenderingContext2D, pts: Point[]) {
     ctx.lineTo(midX, pn.y); ctx.lineTo(pn.x, pn.y);
     ctx.stroke();
 }
-
-// ─── Curved line (quadratic bezier) ──────────────────────────
 function renderCurvedLine(ctx: CanvasRenderingContext2D, pts: Point[]) {
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
@@ -31,8 +27,6 @@ function renderCurvedLine(ctx: CanvasRenderingContext2D, pts: Point[]) {
     }
     ctx.stroke();
 }
-
-// ─── Line / Draw ─────────────────────────────────────────────
 export function renderLine(ctx: CanvasRenderingContext2D, element: NoteboardElement & { points: Point[] }) {
     const pts = getLinearElementAbsolutePoints(element);
     if (pts.length < 2) return;
@@ -49,7 +43,7 @@ export function renderLine(ctx: CanvasRenderingContext2D, element: NoteboardElem
             const jp0 = jitterPoint(pts[0].x, pts[0].y, element.roughness, rng);
             ctx.moveTo(jp0.x, jp0.y);
             for (let i = 0; i < pts.length - 1; i++)
-                drawJitteredLine(ctx, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, element.roughness, rng);
+                drawJitteredLine(ctx, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, element.roughness, rng, Math.max(1, Math.min(256, Math.floor(2048 / (pts.length - 1)))));
             ctx.stroke();
         }
     } else {
@@ -58,8 +52,6 @@ export function renderLine(ctx: CanvasRenderingContext2D, element: NoteboardElem
         ctx.stroke();
     }
 }
-
-// ─── Arrowhead ───────────────────────────────────────────────
 function renderArrowhead(
     ctx: CanvasRenderingContext2D,
     tip: Point, angle: number,
@@ -87,8 +79,6 @@ function renderArrowhead(
     }
     ctx.restore();
 }
-
-// ─── Arrow ───────────────────────────────────────────────────
 export function renderArrow(ctx: CanvasRenderingContext2D, element: NoteboardElement & { points: Point[]; endArrowhead: unknown }) {
     const arrowEl = element as ArrowElement;
     const pts = getLinearElementAbsolutePoints(element);
@@ -104,7 +94,7 @@ export function renderArrow(ctx: CanvasRenderingContext2D, element: NoteboardEle
         ctx.beginPath();
         const jp0 = jitterPoint(pts[0].x, pts[0].y, element.roughness, rng); ctx.moveTo(jp0.x, jp0.y);
         for (let i = 0; i < pts.length - 1; i++)
-            drawJitteredLine(ctx, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, element.roughness, rng);
+            drawJitteredLine(ctx, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, element.roughness, rng, Math.max(1, Math.min(256, Math.floor(2048 / (pts.length - 1)))));
         ctx.stroke();
     } else {
         ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
@@ -131,8 +121,6 @@ export function renderArrow(ctx: CanvasRenderingContext2D, element: NoteboardEle
     renderArrowhead(ctx, last, endAngle, arrowEl.endArrowhead ?? 'arrow', element.strokeColor, element.strokeWidth);
     renderArrowhead(ctx, first, startAngle, arrowEl.startArrowhead ?? null, element.strokeColor, element.strokeWidth);
 }
-
-// ─── Midpoint label for line/arrow ───────────────────────────
 export function renderLineMidLabel(ctx: CanvasRenderingContext2D, element: LineElement | ArrowElement) {
     if (!element.label) return;
     const pts = getLinearElementAbsolutePoints(element);
@@ -156,8 +144,6 @@ export function renderLineMidLabel(ctx: CanvasRenderingContext2D, element: LineE
     ctx.fillText(element.label, midX, midY);
     ctx.restore();
 }
-
-// ─── Catmull-Rom spline ───────────────────────────────────────
 function renderCatmullRom(ctx: CanvasRenderingContext2D, pts: Point[], tension: number = 0.5) {
     if (pts.length < 2) return;
     ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
@@ -170,8 +156,6 @@ function renderCatmullRom(ctx: CanvasRenderingContext2D, pts: Point[], tension: 
     }
     ctx.stroke();
 }
-
-// ─── Pen (pressure-sensitive) ────────────────────────────────
 export function renderPen(ctx: CanvasRenderingContext2D, element: PenElement) {
     const { x, y, points, strokeWidth, highlighter, tension } = element;
     if (points.length < 2) return;

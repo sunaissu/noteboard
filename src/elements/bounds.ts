@@ -2,7 +2,17 @@ import type { Bounds, Point, NoteboardElement } from './types';
 import { isLinearElement } from './types';
 import { getCalloutGeometry } from './calloutGeometry';
 
-// ─── Point-set Bounds ────────────────────────────────────────
+/** Combine bounds without spreading an unbounded collection into a function call. */
+export function combineBounds(bounds: Iterable<readonly number[]>): Bounds {
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    let empty = true;
+    for (const box of bounds) {
+        empty = false;
+        left = Math.min(left, box[0]); top = Math.min(top, box[1]);
+        right = Math.max(right, box[2]); bottom = Math.max(bottom, box[3]);
+    }
+    return empty ? [0, 0, 0, 0] : [left, top, right, bottom];
+}
 
 /** Compute the AABB enclosing a set of points. */
 export function getPointsBounds(points: readonly Point[]): Bounds {
@@ -22,9 +32,6 @@ export function getPointsBounds(points: readonly Point[]): Bounds {
 
     return [minX, minY, maxX, maxY];
 }
-
-// ─── Rotation helpers ────────────────────────────────────────
-
 /** Rotate point (px, py) around center (cx, cy) by `angle` radians. */
 export function rotatePoint(
     px: number,
@@ -61,9 +68,6 @@ export function getRotatedBounds(
     ];
     return getPointsBounds(corners);
 }
-
-// ─── Element Bounds ──────────────────────────────────────────
-
 /**
  * Get the axis-aligned bounding box for any element.
  * For linear elements the bounds are derived from their point arrays.
@@ -75,17 +79,9 @@ export function getElementBounds(element: NoteboardElement): Bounds {
     const cy = y + height / 2;
 
     if (isLinearElement(element)) {
-        // Convert relative points → absolute, then compute bounds
-        const abs: Point[] = element.points.map((p) => ({
-            x: x + p.x,
-            y: y + p.y,
-        }));
-
-        if (abs.length === 0) {
-            return getRotatedBounds([x, y, x, y], angle, cx, cy);
-        }
-
-        const rawBounds = getPointsBounds(abs);
+        if (element.points.length === 0) return getRotatedBounds([x, y, x, y], angle, cx, cy);
+        const [x1, y1, x2, y2] = getPointsBounds(element.points);
+        const rawBounds: Bounds = [x + x1, y + y1, x + x2, y + y2];
         return angle !== 0
             ? getRotatedBounds(rawBounds, angle, cx, cy)
             : rawBounds;
@@ -112,9 +108,6 @@ export function getElementBounds(element: NoteboardElement): Bounds {
     const y2 = Math.max(y, y + height);
     return getRotatedBounds([x1, y1, x2, y2], angle, cx, cy);
 }
-
-// ─── Spatial Queries ─────────────────────────────────────────
-
 /** Check whether two AABBs overlap. */
 export function boundsOverlap(a: Bounds, b: Bounds): boolean {
     return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];

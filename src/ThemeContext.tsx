@@ -9,8 +9,6 @@ export interface NoteboardBrandColors {
     secondary?: string;
 }
 
-// ─── Theme Token Interface ───────────────────────────────────
-
 export interface NoteboardTheme {
     // Brand colors (optional for backward-compatible custom theme objects)
     primaryColor?: string;
@@ -45,9 +43,6 @@ export interface NoteboardTheme {
     // Text input overlay
     textInputColor: string;
 }
-
-// ─── Light Theme ─────────────────────────────────────────────
-
 export const LIGHT_THEME: NoteboardTheme = {
     primaryColor: '#1976d2',
     primarySoft: '#e3f2fd',
@@ -74,9 +69,6 @@ export const LIGHT_THEME: NoteboardTheme = {
 
     textInputColor: '#1e1e1e',
 };
-
-// ─── Dark Theme ──────────────────────────────────────────────
-
 export const DARK_THEME: NoteboardTheme = {
     primaryColor: '#90caf9',
     primarySoft: '#0d47a1',
@@ -158,8 +150,6 @@ export function applyNoteboardBrandColors(
 
     return nextTheme;
 }
-
-// ─── React Context ───────────────────────────────────────────
 
 export const ThemeContext = createContext<NoteboardTheme>(LIGHT_THEME);
 

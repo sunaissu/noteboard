@@ -1,4 +1,3 @@
-// ─── Seeded PRNG for deterministic roughness ──────────────────
 export function seededRandom(seed: number): () => number {
     let s = seed % 2147483647;
     if (s <= 0) s += 2147483646;
@@ -7,8 +6,6 @@ export function seededRandom(seed: number): () => number {
         return (s - 1) / 2147483646;
     };
 }
-
-// ─── Roughness helpers ────────────────────────────────────────
 export function jitterPoint(x: number, y: number, roughness: number, rng: () => number) {
     const jitter = roughness * 1.5;
     return { x: x + (rng() - 0.5) * jitter, y: y + (rng() - 0.5) * jitter };
@@ -20,10 +17,13 @@ export function drawJitteredLine(
     x2: number, y2: number,
     roughness: number,
     rng: () => number,
+    maxSegments = 256,
 ) {
     if (roughness <= 0) { ctx.lineTo(x2, y2); return; }
     const dist = Math.hypot(x2 - x1, y2 - y1);
-    const segments = Math.max(2, Math.ceil(dist / 15));
+    // Imported coordinates can be huge. Roughness must not multiply drawing
+    // work in proportion to offscreen distance.
+    const segments = Math.min(maxSegments, Math.max(2, Math.ceil(dist / 15)));
     for (let i = 1; i <= segments; i++) {
         const t = i / segments;
         const px = x1 + (x2 - x1) * t;
@@ -32,8 +32,6 @@ export function drawJitteredLine(
         ctx.lineTo(jp.x, jp.y);
     }
 }
-
-// ─── Image cache ──────────────────────────────────────────────
 type CachedImageStatus = 'loading' | 'loaded' | 'error';
 
 interface CachedImage {
@@ -74,7 +72,7 @@ export function getCachedImage(
     dataUrl: string,
     _id: string,
     onSettled?: () => void,
-): { image: HTMLImageElement; status: CachedImageStatus } {
+): { image: HTMLImageElement; status: CachedImageStatus; unsubscribe: () => void } {
     // The image source, rather than the element ID, is the cache identity.
     // Different boards may legitimately contain the same serialized element
     // ID with different image contents and must not evict each other forever.
@@ -82,7 +80,7 @@ export function getCachedImage(
     if (cached) {
         if (onSettled && cached.status === 'loading') cached.listeners.add(onSettled);
         touchImageCacheEntry(dataUrl, cached);
-        return { image: cached.image, status: cached.status };
+        return { image: cached.image, status: cached.status, unsubscribe: () => { if (onSettled) cached.listeners.delete(onSettled); } };
     }
 
     const image = new Image();
@@ -100,15 +98,13 @@ export function getCachedImage(
         entry.listeners.clear();
         listeners.forEach((listener) => listener());
     };
-    image.onload = () => settle('loaded');
+    image.onload = () => settle(image.naturalWidth > 0 && image.naturalHeight > 0 && image.naturalWidth * image.naturalHeight <= 16_000_000 ? 'loaded' : 'error');
     image.onerror = () => settle('error');
     imageCache.set(dataUrl, entry);
     trimImageCache();
     image.src = dataUrl;
-    return { image, status: entry.status };
+    return { image, status: entry.status, unsubscribe: () => { if (onSettled) entry.listeners.delete(onSettled); } };
 }
-
-// ─── Drop shadow helpers ──────────────────────────────────────
 export function applyDropShadow(ctx: CanvasRenderingContext2D, shadow: { blur: number; offsetX: number; offsetY: number; color: string }) {
     ctx.shadowBlur = shadow.blur;
     ctx.shadowOffsetX = shadow.offsetX;

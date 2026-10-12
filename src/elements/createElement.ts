@@ -21,17 +21,11 @@ import {
     DEFAULT_FONT_FAMILY,
     DEFAULT_STROKE_COLOR,
 } from '../constants';
-
-// ─── ID Generation ───────────────────────────────────────────
-
 let counter = 0;
 
 export function generateId(): string {
     return `${Date.now().toString(36)}_${(counter++).toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
-
-// ─── Defaults ────────────────────────────────────────────────
-
 function baseDefaults(overrides: Partial<NoteboardElementBase> = {}): NoteboardElementBase {
     return {
         id: generateId(),
@@ -52,10 +46,7 @@ function baseDefaults(overrides: Partial<NoteboardElementBase> = {}): NoteboardE
         isDeleted: false,
         ...overrides,
     };
-}
-
-// ─── Per-type Creators ───────────────────────────────────────
-// NOTE: `baseDefaults` already spreads `overrides` for base fields.
+}// NOTE: `baseDefaults` already spreads `overrides` for base fields.
 // Each creator only sets type-specific defaults — no second `...overrides` spread
 // to avoid the double-spread bug where overrides could silently overwrite `type`.
 
@@ -173,8 +164,6 @@ export function createPenElement(
         points: overrides.points ?? [],
     } as PenElement;
 }
-// ─── Image ───────────────────────────────────────────────────
-
 export function createImageElement(
     overrides: Partial<ImageElement> = {},
 ): ImageElement {
@@ -184,9 +173,6 @@ export function createImageElement(
         dataUrl: overrides.dataUrl ?? '',
     } as ImageElement;
 }
-
-// ─── Phase 2 Creators ─────────────────────────────────────────────
-
 export function createStickyNoteElement(
     overrides: Partial<StickyNoteElement> = {},
 ): StickyNoteElement {

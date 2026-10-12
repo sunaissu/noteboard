@@ -149,19 +149,19 @@ export function AppearanceSection({
                         <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Align</span>
                     </div>
                     <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
-                        <button title="Align left edges"      onClick={onAlignLeft}    style={ibs()}>⇤</button>
-                        <button title="Center horizontally"   onClick={onAlignCenterH} style={ibs()}>↔</button>
-                        <button title="Align right edges"     onClick={onAlignRight}   style={ibs()}>⇥</button>
-                        <button title="Align top edges"       onClick={onAlignTop}     style={ibs()}>⇡</button>
-                        <button title="Center vertically"     onClick={onAlignCenterV} style={ibs()}>↕</button>
-                        <button title="Align bottom edges"    onClick={onAlignBottom}  style={ibs()}>⇣</button>
+                        <button type="button" title="Align left edges"      onClick={onAlignLeft}    style={ibs()}>⇤</button>
+                        <button type="button" title="Center horizontally"   onClick={onAlignCenterH} style={ibs()}>↔</button>
+                        <button type="button" title="Align right edges"     onClick={onAlignRight}   style={ibs()}>⇥</button>
+                        <button type="button" title="Align top edges"       onClick={onAlignTop}     style={ibs()}>⇡</button>
+                        <button type="button" title="Center vertically"     onClick={onAlignCenterV} style={ibs()}>↕</button>
+                        <button type="button" title="Align bottom edges"    onClick={onAlignBottom}  style={ibs()}>⇣</button>
                     </div>
                     {selectedElements.length > 2 && (
                         <div style={{ display: 'flex', gap: 3 }}>
-                            <button title="Distribute horizontally" onClick={onDistributeH} style={ibs()}>
+                            <button type="button" title="Distribute horizontally" onClick={onDistributeH} style={ibs()}>
                                 <span style={{ fontSize: 10 }}>⫞⫟ H</span>
                             </button>
-                            <button title="Distribute vertically" onClick={onDistributeV} style={ibs()}>
+                            <button type="button" title="Distribute vertically" onClick={onDistributeV} style={ibs()}>
                                 <span style={{ fontSize: 10 }}>⫠⫡ V</span>
                             </button>
                         </div>

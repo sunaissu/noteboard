@@ -19,6 +19,7 @@ interface ContextMenuProps {
     x: number;
     y: number;
     items: ContextMenuItem[];
+    bounds?: { width: number; height: number };
     onClose: () => void;
 }
 
@@ -26,23 +27,32 @@ function isSeparator(item: ContextMenuItem): item is ContextMenuSeparator {
     return 'separator' in item;
 }
 
-export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
+export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) {
     const theme = useNoteboardTheme();
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Adjust position so menu stays inside viewport
     const MENU_W = 200;
     const MENU_H = items.length * 34;
-    const adjustedX = x + MENU_W > window.innerWidth ? x - MENU_W : x;
-    const adjustedY = y + MENU_H > window.innerHeight ? y - MENU_H : y;
+    const adjustedX = Math.max(8, Math.min(x, (bounds?.width ?? window.innerWidth) - MENU_W - 8));
+    const adjustedY = Math.max(8, Math.min(y, (bounds?.height ?? window.innerHeight) - MENU_H - 8));
 
     useEffect(() => {
+        const previousFocus = document.activeElement as HTMLElement | null;
+        menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
         const handler = (e: PointerEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 onClose();
             }
         };
-        const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const keyHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' || e.key === 'Tab') { onClose(); return; }
+            const buttons = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
+            if (!buttons.length || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+            e.preventDefault();
+            const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+            buttons[e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : (index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length].focus();
+        };
         // Delay slightly so the pointerdown that opened the menu doesn't immediately close it
         const tid = setTimeout(() => {
             window.addEventListener('pointerdown', handler);
@@ -50,13 +60,14 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         }, 0);
         return () => {
             clearTimeout(tid);
+            if (previousFocus?.isConnected) previousFocus.focus();
             window.removeEventListener('pointerdown', handler);
             window.removeEventListener('keydown', keyHandler);
         };
     }, [onClose]);
 
     return (
-        <div
+        <div role="menu" aria-label="Board actions"
             ref={menuRef}
             style={{
                 position: 'absolute',
@@ -68,7 +79,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 borderRadius: 10,
                 boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
                 padding: '4px 0',
-                minWidth: MENU_W,
+                minWidth: MENU_W, maxHeight: bounds ? Math.max(40, bounds.height - 16) : 'calc(100vh - 16px)', overflowY: 'auto',
                 fontFamily: "'Inter', system-ui, sans-serif",
                 pointerEvents: 'auto',
             }}
@@ -85,7 +96,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                     );
                 }
                 return (
-                    <button
+                    <button type="button" role="menuitem"
                         key={idx}
                         disabled={item.disabled}
                         onClick={() => { item.onClick(); onClose(); }}
