@@ -1,6 +1,6 @@
 {
   "name": "@sunaissu/noteboard",
-  "version": "2.0.1",
+  "version": "3.0.0-rc.1",
   "description": "A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.",
   "keywords": [
     "react",
@@ -19,7 +19,8 @@
     "url": "git+https://github.com/sunaissu/noteboard.git"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "next"
   },
   "license": "MIT",
   "author": "sunaissu",
@@ -45,7 +46,9 @@
     "LICENSE",
     "README.md",
     "implementation-review.txt",
-    "feature-backlog.txt"
+    "feature-backlog.txt",
+    "RELEASE.txt",
+    "THIRD_PARTY_NOTICES.txt"
   ],
   "scripts": {
     "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",
@@ -55,7 +58,8 @@
     "test:unit": "node --test",
     "playground": "npm --prefix playground run dev",
     "playground:build": "npm --prefix playground run build",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@phosphor-icons/react": "^2.1.10",

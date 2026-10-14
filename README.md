@@ -1,3 +1,5 @@
+Release candidate details: [RELEASE.txt](./RELEASE.txt). This candidate has not been published.
+
 # @sunaissu/noteboard
 
 > A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.
@@ -258,7 +260,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes across versions.
 
 MIT License. See [LICENSE](./LICENSE) for details.
 
-## Unreleased collaboration migration
+## 3.0.0 release candidate collaboration migration
 
 This working tree changes the shared text schema. Before updating an existing collaborative deployment, back up the Yjs document, disconnect old clients, run `migrateNoteboardText(document)` from `@sunaissu/noteboard/yjs` on the authoritative document, persist it, and reconnect only updated clients. Do not let disconnected old clients independently migrate or overwrite the same labels. Plain JSON board snapshots still contain ordinary text strings.
 

@@ -6,7 +6,12 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
-## [Unreleased]
+## [3.0.0-rc.1] - Unreleased candidate
+
+This is a local release candidate, not a published version. The shared Yjs text schema and navigation defaults require coordinated migration.
+
+- Include the bundled Phosphor Icons license in the package.
+- Rebuild distributions before packing and default candidate publication to the next tag.
 
 ### Changed
 
