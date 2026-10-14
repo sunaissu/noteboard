@@ -81,7 +81,6 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
 }) => {
     const theme = useNoteboardTheme();
 
-    // Only show when a shape tool is currently active
     if (!isShapeTool(activeTool)) return null;
 
     return (
@@ -134,7 +133,6 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                         }}
                     >
                         <Icon size={20} weight={isActive ? 'fill' : 'regular'} />
-                        {/* Shortcut key badge — only shown when bound to a key */}
                         {keyLabel && (
                             <span
                                 style={{

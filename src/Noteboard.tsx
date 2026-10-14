@@ -55,11 +55,9 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         themeOverrides,
         brandColors,
         onThemeChange,
-        // ── View / Edit mode ──
         readOnly: controlledReadOnly,
         defaultReadOnly = false,
         onViewportChange,
-        // ── Persistence & multiplayer ──
         initialElements,
         initialViewport,
         viewport: externalViewport,
@@ -134,7 +132,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     const handleShapeSelect = useCallback(
         (shape: ShapeVariant) => {
             setActiveShape(shape);
-            // Also switch the tool to this shape
             if (!controlledTool) {
                 setInternalTool(shape);
             }
@@ -157,7 +154,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (!isFocused || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
-            // Skip if typing in an input
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
@@ -167,7 +163,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
                 return;
             }
 
-            // G = toggle grid
             if (e.key === 'g' || e.key === 'G') {
                 setShowGrid((v) => !v);
                 setSnapEnabled((v) => !v);
@@ -177,7 +172,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [handleShapeSelect, isFocused]);
 
-    // Track container size
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -232,7 +226,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         return () => container.removeEventListener('wheel', handleWheel);
     }, []);
 
-    // Inject Google Fonts (Inter) — once
     useEffect(() => {
         const id = 'noteboard-google-fonts';
         if (document.getElementById(id)) return;
@@ -513,7 +506,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         !isReadOnly && toolbarPosition === 'bottom' ? toolbarOffset + toolbarHeight + 12 : 0,
         !isReadOnly && selectedElements.length && resolvedPropertiesPosition === 'bottom' ? panelSize.height + 24 : 0);
 
-    // Look up the element being edited (for shape text editing font resolution)
     const editingElement = React.useMemo(
         () => textEdit.editingId ? elements.find((el) => el.id === textEdit.editingId) : null,
         [elements, textEdit.editingId],
@@ -649,7 +641,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         });
     }, [selectedIds, setElements, history]);
 
-    // Focus text input when it appears and auto-size for existing content
     const textMountedRef = useRef(false);
     const textComposingRef = useRef(false);
     const textBaseRef = useRef('');
@@ -673,7 +664,6 @@ export const Noteboard = forwardRef<NoteboardRef, NoteboardProps>((
         if (textEdit.active && textInputRef.current) {
             textMountedRef.current = false;
             const ta = textInputRef.current;
-            // Auto-size to fit existing multi-line content
             resizeTextInput(ta);
             // Delay focus slightly to avoid immediate blur issues
             requestAnimationFrame(() => {

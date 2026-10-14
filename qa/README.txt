@@ -8,7 +8,7 @@ Run from the noteboard directory after installing dependencies in all three pack
    node qa/review.cjs
 3. Stop the local server when finished.
 
-The runner uses installed Google Chrome at C:/Program Files/Google/Chrome/Application/chrome.exe. It writes screenshots to qa/artifacts and closes its browser even when an assertion fails. It uses in-memory Yjs documents; no account or production service is connected.
+The runner uses installed Google Chrome at C:/Program Files/Google/Chrome/Application/chrome.exe. It writes disposable screenshots to the ignored qa/artifacts directory and closes its browser even when an assertion fails. It uses in-memory Yjs documents; no account or production service is connected.
 
 Coverage includes all four property positions, local/peer typing, caret movement, source composition, undo isolation, clean exports, object search, context menus, image admission, draft recovery, document tools, calculator variables/format/memory, and 390-pixel light/dark layouts.
 
