@@ -74,8 +74,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     const isMultiSelect = selectedElements.length > 1;
     const isLocked = selectedElements.some((el) => el.locked);
 
-    // Show text section only for standalone text elements or shapes that actually
-    // contain text (i.e. the user has typed something into the shape).
     const showTextProps = hasText || hasShapesWithText || selectedElements.some(isShapeElement);
     const showLineProps = hasLines || hasArrows;
 

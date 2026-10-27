@@ -51,7 +51,9 @@
     "LICENSE",
     "README.md",
     "THIRD_PARTY_NOTICES.txt",
-    "assets/brand"
+    "assets/brand/sunaissu.svg",
+    "assets/brand/sora-OFL.txt",
+    "assets/brand/SOURCE.txt"
   ],
   "scripts": {
     "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",

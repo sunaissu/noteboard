@@ -43,9 +43,6 @@ button { font: inherit; }
 .metrics strong, .metrics span { display: block; }
 .metrics strong { font: 700 1rem "SFMono-Regular", Consolas, monospace; }
 .metrics span { margin-top: 0.15rem; color: #596473; font-size: 0.58rem; text-transform: uppercase; }
-.api-note { margin-top: 1rem; padding: 0.75rem; border: 1px solid rgba(125, 211, 252, 0.18); border-radius: 8px; background: rgba(125, 211, 252, 0.04); }
-.api-note code { color: #7dd3fc; font-size: 0.62rem; }
-.api-note p { margin: 0.5rem 0 0; color: #6f7a89; font-size: 0.62rem; line-height: 1.5; }
 .source-drawer { margin-top: 1rem; border: 1px solid #252c35; border-radius: 10px; overflow: hidden; background: #0b0e12; }
 .source-drawer summary { padding: 0.8rem 1rem; display: flex; justify-content: space-between; color: #8f9aaa; cursor: pointer; font-size: 0.7rem; }
 .source-drawer summary span { color: #56606e; }

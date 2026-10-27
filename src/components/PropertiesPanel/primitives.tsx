@@ -12,21 +12,6 @@ function propertyFields(children: React.ReactNode): React.ReactNode[] {
     }, []);
 }
 
-export function SectionLabel({ children, theme }: { children: React.ReactNode; theme: NoteboardTheme }) {
-    return (
-        <div style={{
-            fontSize: 10,
-            fontWeight: 600,
-            color: theme.panelMutedColor,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            marginBottom: 8,
-        }}>
-            {children}
-        </div>
-    );
-}
-
 export function CollapsibleSection({
     label,
     theme,

@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
     "@sunaissu/calculator": "file:vendor/sunaissu-calculator-1.1.0-rc.2.tgz",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

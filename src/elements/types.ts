@@ -256,13 +256,6 @@ export function isTextElement(
     return el.type === 'text';
 }
 
-export function isImageElement(
-    el: NoteboardElement,
-): el is ImageElement {
-    return el.type === 'image';
-}
-
-
 /** Check if a shape element has inline text content */
 export function hasShapeText(
     el: NoteboardElement,

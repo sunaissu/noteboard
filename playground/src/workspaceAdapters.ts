@@ -37,7 +37,7 @@ export function playgroundVersions(
   }[] => JSON.parse(localStorage.getItem(key) ?? "[]");
   return {
     currentRevision: () => JSON.stringify(getElements()),
-    list: async () => read().map(({ elements, ...meta }) => meta),
+    list: async () => read().map(({ id, name, createdAt }) => ({ id, name, createdAt })),
     load: async (id) => {
       const entry = read().find((r) => r.id === id);
       if (!entry) throw new Error("Revision was removed");
