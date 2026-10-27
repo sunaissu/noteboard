@@ -52,8 +52,6 @@ export function LineSection({ selectedElements, onUpdate }: Props) {
                 onChange={(v) => onUpdate({ routing: v, curveType: v === 'curve' ? 'curve' : 'straight' } as any)}
                 theme={theme}
             />
-
-            {/* Start arrowhead */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <ArrowLineRightIcon size={14} weight="bold" style={{ color: theme.panelMutedColor, transform: 'scaleX(-1)' }} />
@@ -69,8 +67,6 @@ export function LineSection({ selectedElements, onUpdate }: Props) {
                     <option value="bar">Bar</option>
                 </select>
             </div>
-
-            {/* End arrowhead */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <ArrowLineRightIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />
@@ -86,8 +82,6 @@ export function LineSection({ selectedElements, onUpdate }: Props) {
                     <option value="bar">Bar</option>
                 </select>
             </div>
-
-            {/* Midpoint label */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <TagIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />

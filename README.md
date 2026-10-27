@@ -1,5 +1,3 @@
-Release candidate details: [RELEASE.txt](./RELEASE.txt). This candidate has not been published.
-
 # @sunaissu/noteboard
 
 > A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.
@@ -291,11 +289,9 @@ Settings includes an object search, board overview, and up to 20 viewpoints reta
 
 Uploads and pasted images accept PNG, JPEG, GIF, and WebP. `maxImageBytes` defaults to 5 MiB and can lower that limit; `maxImagePixels` defaults to 16 million decoded pixels. The host must also enforce its storage limits. Imports, text edits, and imperative element replacements participate in history.
 
-See [the implementation review](./implementation-review.txt) for verification and [the feature backlog](./feature-backlog.txt) for all 26 feature contracts, dependencies and acceptance checks. OPEN and PARTIAL items remain unfinished. No release has been published from this working tree.
-
 ## Development checks
 
-Run `npm test`, `npm run playground:build`, and `npm pack --dry-run --json` before release. The GitHub Actions workflow is configured to test the package on Node 18, 22 and 24, build the playground on Node 22/24, and audit both dependency trees. Browser checks remain a separate local step documented in the implementation review. The workflow has not been run on GitHub as part of this local review.
+Run `npm test`, `npm run playground:build`, and `npm pack --dry-run --json` before release. The GitHub Actions workflow is configured to test the package on Node 18, 22 and 24, build the playground on Node 22/24, and audit both dependency trees. Run the browser checks in qa/ separately. The workflow has not been run on GitHub as part of this local review.
 
 ## Properties layout and scrolling
 

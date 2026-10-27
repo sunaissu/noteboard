@@ -107,8 +107,6 @@ export function AppearanceSection({
                 onChange={(v) => onUpdate({ opacity: v })}
                 theme={theme}
             />
-
-            {/* Blend Mode */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <CopyIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />

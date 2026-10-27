@@ -60,7 +60,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
     return (
         <>
-            {/* Burger menu button */}
             <button type="button"
                 ref={buttonRef}
                 onClick={() => setOpen((v) => !v)}
@@ -87,8 +86,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             >
                 <List size={20} weight="bold" />
             </button>
-
-            {/* Slide-out panel */}
             <div
                 ref={panelRef}
                 style={{
@@ -112,7 +109,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     fontFamily: "'Inter', system-ui, sans-serif",
                 }}
             >
-                {/* Panel header */}
                 <div
                     style={{
                         display: 'flex',
@@ -159,8 +155,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         <X size={16} weight="bold" />
                     </button>
                 </div>
-
-                {/* Panel content */}
                 <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
                     {children}
                     {/* ── View Options ── */}
@@ -173,7 +167,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             borderBottom: theme.panelBorder,
                         }}
                     >
-                        {/* Theme mode */}
                         <div style={{ display: 'grid', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 {themeMode === 'system' ? (
@@ -230,8 +223,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 ))}
                             </div>
                         </div>
-
-                        {/* Grid toggle */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <GridNine size={16} weight="fill" style={{ color: theme.buttonActiveColor }} />
@@ -252,7 +243,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
                             </button>
                         </div>
-                        {/* Keyboard shortcuts */}
                         {onShowShortcuts && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -280,7 +270,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
                     {/* ── Actions ── */}
                     <div style={{ paddingTop: 16, borderBottom: theme.panelBorder, paddingBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {/* Save Board */}
                         {onSave && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -297,8 +286,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </button>
                             </div>
                         )}
-
-                        {/* Export PNG */}
                         {onExportImage && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -315,8 +302,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </button>
                             </div>
                         )}
-
-                        {/* Export JPEG */}
                         {onExportImage && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -333,8 +318,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </button>
                             </div>
                         )}
-
-                        {/* Export JSON */}
                         {onExportJSON && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -351,8 +334,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </button>
                             </div>
                         )}
-
-                        {/* Import JSON */}
                         {onImportJSON && (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -5,3 +5,11 @@ build
 .env.local
 
 /qa/artifacts/
+*.tgz
+!playground/vendor/sunaissu-calculator-1.1.0-rc.2.tgz
+
+# Local planning and review notes
+/implementation-review.txt
+/feature-backlog.txt
+/RELEASE.txt
+/review-checklist.txt

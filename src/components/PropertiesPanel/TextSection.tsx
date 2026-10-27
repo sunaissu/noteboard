@@ -37,8 +37,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
         <>
             <Divider theme={theme} />
             <CollapsibleSection label="Text" theme={theme}>
-
-            {/* Font size stepper */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <TextAaIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />
@@ -59,8 +57,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     <span style={{ fontSize: 11, color: theme.panelMutedColor }}>px</span>
                 </div>
             </div>
-
-            {/* Font family */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <TextAaIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />
@@ -73,8 +69,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     ))}
                 </select>
             </div>
-
-            {/* Font weight / style / decoration */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Style</span>
@@ -94,8 +88,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                         style={{ ...ibStyle(textDecoration === 'line-through'), textDecoration: 'line-through', fontSize: 13 }}>S</button>
                 </div>
             </div>
-
-            {/* Text alignment */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Align</span>
@@ -117,8 +109,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     })}
                 </div>
             </div>
-
-            {/* Line height */}
             <SliderRow
                 label="Line Height"
                 icon={<WaveTriangleIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />}
@@ -126,8 +116,6 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                 onChange={(v) => onUpdate({ lineHeight: v } as any)}
                 theme={theme}
             />
-
-            {/* Highlight color */}
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <HighlighterIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />

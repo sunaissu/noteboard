@@ -26,8 +26,6 @@ export function StarSection({ selectedElements, onUpdate }: Props) {
         <>
             <Divider theme={theme} />
             <CollapsibleSection label="Shape" theme={theme}>
-
-            {/* Star vs Polygon toggle */}
             <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
                 <button type="button" style={ibStyle(!isStar)} onClick={() => onUpdate({ isStar: false } as any)}>Polygon</button>
                 <button type="button" style={ibStyle(isStar)}  onClick={() => onUpdate({ isStar: true } as any)}>Star</button>

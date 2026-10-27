@@ -45,9 +45,6 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
-    "implementation-review.txt",
-    "feature-backlog.txt",
-    "RELEASE.txt",
     "THIRD_PARTY_NOTICES.txt"
   ],
   "scripts": {

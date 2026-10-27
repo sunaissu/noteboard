@@ -59,7 +59,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     transition: 'background 0.3s ease, box-shadow 0.3s ease',
                 }}
             >
-                {/* Undo / Redo buttons */}
                 {(onUndo || onRedo) && (
                     <>
                         <button type="button"
