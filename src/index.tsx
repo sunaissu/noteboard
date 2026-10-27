@@ -37,10 +37,14 @@ export type { BoardImageOptions } from './exportImage';
 export { createBoardTemplate } from './templates';
 export type { BoardTemplate } from './templates';
 
+export { exportBoardSvg, exportBoardPdf, exportSelection } from './exportDocument';
+export { pdfPagePlan } from './exportDocument';
+export type { BoardPdfOptions } from './exportDocument';
 export { routeOrthogonal } from './elements/connectorRouting';
 export { connectorRouteWarnings } from './elements/connectorRouting';
 export * from './boardWorkflows';
 export * from './boardMetadata';
 export * from './collaborationWorkflows';
+export * from './boardClipboard';
 export * from './textDrafts';
 export { measureTextElement } from './textGeometry';

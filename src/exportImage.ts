@@ -16,7 +16,7 @@ export interface BoardImageOptions {
 /** Render content on a dedicated canvas, independent of selection, grid and viewport. */
 export function renderBoardImage(elements: NoteboardElement[], format: 'png' | 'jpeg' = 'png', options: BoardImageOptions = {}): string {
     const selected = options.selectedIds && new Set(options.selectedIds);
-    const active = elements.filter(element => !element.isDeleted && (!selected || selected.has(element.id)));
+    const active = elements.filter(element => !element.isDeleted && !element.hidden && (!selected || selected.has(element.id)));
     const padding = options.padding ?? 24, scale = options.scale ?? 1;
     if (!Number.isFinite(padding) || padding < 0 || !Number.isFinite(scale) || scale <= 0) throw new Error('Export padding and scale must be finite positive values');
     const bounds = active.map(element => {
@@ -46,7 +46,7 @@ export async function exportBoardImage(elements: NoteboardElement[], format: 'pn
     const timeout = options.imageTimeoutMs ?? 15_000;
     if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 120_000) throw new Error('Image timeout must be greater than zero and at most 120000 milliseconds');
     const selected = options.selectedIds && new Set(options.selectedIds);
-    await Promise.all(elements.filter(element => !element.isDeleted && element.type === 'image' && (!selected || selected.has(element.id))).map(element => new Promise<void>((resolve, reject) => {
+    await Promise.all(elements.filter(element => !element.isDeleted && !element.hidden && element.type === 'image' && (!selected || selected.has(element.id))).map(element => new Promise<void>((resolve, reject) => {
         if (element.type !== 'image') return resolve();
         let unsubscribe = () => {};
         const timer = setTimeout(() => { unsubscribe(); reject(new Error('Image loading timed out during export')); }, timeout);

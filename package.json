@@ -86,5 +86,9 @@
   "overrides": {
     "esbuild": "0.28.1"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "svg2pdf.js": "^2.8.1"
+  }
 }

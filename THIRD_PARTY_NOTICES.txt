@@ -22,3 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+PDF dependencies (installed separately, loaded on demand)
+jsPDF: MIT, https://github.com/parallax/jsPDF
+svg2pdf.js: MIT, https://github.com/yWorks/svg2pdf.js
+Their distributions include their license notices. They are declared runtime dependencies, not copied into the package source.
