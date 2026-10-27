@@ -68,7 +68,12 @@ function renderImage(
     if (!dataUrl) return;
     const { image, status } = getCachedImage(dataUrl, id, onImageSettled);
     if (status === 'loaded') {
-        ctx.drawImage(image, x, y, width, height);
+        ctx.save();
+        if (element.mask === 'ellipse') { ctx.beginPath(); ctx.ellipse(x+width/2,y+height/2,Math.abs(width/2),Math.abs(height/2),0,0,Math.PI*2); ctx.clip(); }
+        const crop=element.crop;
+        if(crop)ctx.drawImage(image,crop.x*image.naturalWidth,crop.y*image.naturalHeight,crop.width*image.naturalWidth,crop.height*image.naturalHeight,x,y,width,height);
+        else ctx.drawImage(image,x,y,width,height);
+        ctx.restore();
     } else {
         ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x, y, width, height);
         ctx.strokeStyle = '#ccc'; ctx.strokeRect(x, y, width, height);
@@ -83,7 +88,7 @@ export function renderElement(
     excludeText = false,
     onImageSettled?: () => void,
 ) {
-    if (element.isDeleted) return;
+    if (element.isDeleted || element.hidden) return;
 
     ctx.save();
     ctx.globalAlpha = element.opacity / 100;

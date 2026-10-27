@@ -1,3 +1,4 @@
+import { routeConnectors } from './connectorRouting';
 import { rotatePoint } from './bounds';
 import { getCalloutGeometry } from './calloutGeometry';
 import type { ElementBinding, NoteboardElement, Point } from './types';
@@ -329,7 +330,7 @@ export function getClosestPointOnShapeOutline(
     element: NoteboardElement,
     point: Point,
 ): Point | null {
-    if (element.isDeleted || !isShapeElement(element) || !isFinitePoint(point)) return null;
+    if (element.isDeleted || element.hidden || !isShapeElement(element) || !isFinitePoint(point)) return null;
     if (![element.x, element.y, element.width, element.height].every(Number.isFinite)) return null;
     const unrotatedPoint = toUnrotatedPoint(element, point);
     const outlinePoint = closestUnrotatedOutlinePoint(element, unrotatedPoint);
@@ -371,6 +372,7 @@ export function findBinding(
     elements: readonly NoteboardElement[],
     maxDistance: number = CONNECTOR_SNAP_DISTANCE,
     excludeId?: string,
+    connectorType: 'line'|'arrow' = 'arrow',
 ): ConnectorSnapResult | null {
     if (!isFinitePoint(point) || !Number.isFinite(maxDistance) || maxDistance < 0) return null;
     let best: ConnectorSnapResult | null = null;
@@ -378,7 +380,11 @@ export function findBinding(
     // Later elements are visually on top and win exact-distance ties.
     for (let index = elements.length - 1; index >= 0; index--) {
         const element = elements[index];
-        if (!element || element.id === excludeId || element.isDeleted || !isShapeElement(element)) continue;
+        if (!element || element.id === excludeId || element.isDeleted || element.hidden || !isShapeElement(element)) continue;
+        if(element.ports?.length){
+            for(const port of element.ports){if(!port.accepts.includes(connectorType))continue;const portPoint=toWorldPoint(element,pointFromFixedPoint(element,port.point));const distance=Math.hypot(point.x-portPoint.x,point.y-portPoint.y);if(distance<=maxDistance&&(!best||distance<best.distance))best={point:portPoint,distance,binding:{elementId:element.id,portId:port.id,fixedPoint:{...port.point}}};}
+            continue;
+        }
         const outlinePoint = getClosestPointOnShapeOutline(element, point);
         if (!outlinePoint) continue;
         const distance = Math.hypot(point.x - outlinePoint.x, point.y - outlinePoint.y);
@@ -403,6 +409,10 @@ export function resolveBinding(
     if (!binding || typeof binding.elementId !== 'string' || !isFinitePoint(binding.fixedPoint)) return null;
     const target = getElement(elements, binding.elementId);
     if (!target || target.isDeleted || !isShapeElement(target)) return null;
+    if (binding.portId) {
+        const port = target.ports?.find(port => port.id === binding.portId);
+        return port ? toWorldPoint(target, pointFromFixedPoint(target, port.point)) : null;
+    }
     if (![target.x, target.y, target.width, target.height].every(Number.isFinite)) return null;
     const hint = pointFromFixedPoint(target, binding.fixedPoint);
     const outlinePoint = closestUnrotatedOutlinePoint(target, hint);
@@ -424,15 +434,16 @@ const updateBoundElement = (
     lookup: ReadonlyMap<string, NoteboardElement>,
 ): NoteboardElement => {
     if (element.type !== 'line' && element.type !== 'arrow') return element;
-    const startBinding = element.startBinding ?? null;
-    const endBinding = element.endBinding ?? null;
-    if (!startBinding && !endBinding) return element;
+    const permitted=(binding:ElementBinding|null|undefined)=>{if(!binding?.portId)return binding??null;const target=getElement(lookup,binding.elementId);return target?.ports?.find(p=>p.id===binding.portId)?.accepts.includes(element.type as 'line'|'arrow')?binding:null;};
+    const startBinding = permitted(element.startBinding);
+    const endBinding = permitted(element.endBinding);
+    if (!startBinding && !endBinding) return element.startBinding||element.endBinding?{...element,startBinding:null,endBinding:null}:element;
 
     const resolvedStart = startBinding ? resolveBinding(startBinding, lookup) : null;
     const resolvedEnd = endBinding ? resolveBinding(endBinding, lookup) : null;
     const nextStartBinding = startBinding && resolvedStart ? startBinding : null;
     const nextEndBinding = endBinding && resolvedEnd ? endBinding : null;
-    const bindingChanged = nextStartBinding !== startBinding || nextEndBinding !== endBinding;
+    const bindingChanged = nextStartBinding !== element.startBinding || nextEndBinding !== element.endBinding;
 
     if (element.points.length === 0) {
         if (!bindingChanged) return element;
@@ -490,6 +501,11 @@ const updateBoundElement = (
         return { ...element, startBinding: nextStartBinding, endBinding: nextEndBinding };
     }
 
+    if(element.routing==='orthogonal'&&element.manualRoute&&renderedPoints.length>2){
+        const first=renderedPoints[1],last=renderedPoints[lastIndex-1];
+        if(first.x===currentStart.x)first.x=desiredStart.x;else first.y=desiredStart.y;
+        if(last.x===currentEnd.x)last.x=desiredEnd.x;else last.y=desiredEnd.y;
+    }
     renderedPoints[0] = desiredStart;
     renderedPoints[lastIndex] = desiredEnd;
     const origin = renderedPoints[0];
@@ -526,5 +542,5 @@ export function updateBoundElements(elements: NoteboardElement[]): NoteboardElem
         if (!updated) updated = elements.slice();
         updated[index] = next;
     }
-    return updated ?? elements;
+    return routeConnectors(updated ?? elements);
 }

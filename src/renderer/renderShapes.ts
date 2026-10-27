@@ -1,3 +1,4 @@
+import { wrapShapeText } from '../textGeometry';
 import type { NoteboardElement, RectangleElement } from '../elements/types';
 import { seededRandom, jitterPoint, drawJitteredLine } from './utils';
 export function renderRectangle(ctx: CanvasRenderingContext2D, element: RectangleElement) {
@@ -138,20 +139,7 @@ export function renderShapeText(
     ctx.textBaseline = 'top';
 
     const lineHeight = fontSize * lineHeightMultiplier;
-    const words = text.split(/\s+/);
-    const lines: string[] = [];
-    let currentLine: string[] = [];
-    let currentWidth = 0;
-    const spaceWidth = ctx.measureText(' ').width;
-    for (const word of words) {
-        if (!word) continue;
-        const wordWidth = ctx.measureText(word).width;
-        const nextWidth = currentWidth + (currentLine.length ? spaceWidth : 0) + wordWidth;
-        if (nextWidth > maxWidth && currentLine.length) {
-            lines.push(currentLine.join(' ')); currentLine = [word]; currentWidth = wordWidth;
-        } else { currentLine.push(word); currentWidth = nextWidth; }
-    }
-    if (currentLine.length) lines.push(currentLine.join(' '));
+    const lines = wrapShapeText(text,maxWidth,line=>ctx.measureText(line).width);
 
     const totalTextHeight = lines.length * lineHeight;
     const absX = Math.min(x, x + width), absY = Math.min(y, y + height);

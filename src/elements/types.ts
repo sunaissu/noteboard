@@ -34,9 +34,14 @@ export interface DropShadow {
 export interface ElementBinding {
     elementId: string;
     fixedPoint: Point;
+    portId?: string;
 }
 
 export interface NoteboardElementBase {
+    link?: import('../boardMetadata').ObjectLink;
+    ports?: import('../boardMetadata').ConnectionPort[];
+    documentCard?: import('../boardMetadata').DocumentCard;
+    calculation?: import('../boardMetadata').CalculationCard;
     id: string;
     type: string;
 
@@ -69,6 +74,10 @@ export interface NoteboardElementBase {
 
     // Interaction lock — element cannot be selected, moved, or edited when true
     locked?: boolean;
+    /** User-facing name shown in the layer list. */
+    displayName?: string;
+    /** Hidden objects stay in the document but do not render or receive input. */
+    hidden?: boolean;
 
     // Visual effects
     dropShadow?: DropShadow;
@@ -112,6 +121,8 @@ export interface LineElement extends NoteboardElementBase {
     /** Curve / routing mode */
     curveType: 'straight' | 'curve';
     routing?: RoutingMode;
+    /** Preserve user-edited bends instead of automatic obstacle routing. */
+    manualRoute?: boolean;
     startArrowhead?: Arrowhead;
     endArrowhead?: Arrowhead;
     /** Optional midpoint label */
@@ -132,6 +143,8 @@ export interface ArrowElement extends NoteboardElementBase {
     /** Curve / routing mode */
     curveType: 'straight' | 'curve';
     routing?: RoutingMode;
+    /** Preserve user-edited bends instead of automatic obstacle routing. */
+    manualRoute?: boolean;
     /** Optional midpoint label */
     label?: string;
     labelFontSize?: number;
@@ -176,6 +189,9 @@ export interface ImageElement extends NoteboardElementBase {
     type: 'image';
     /** Base64 data URL of the image */
     dataUrl: string;
+    assetId?: string;
+    crop?: import('../boardMetadata').ImageCrop;
+    mask?: 'rectangle' | 'ellipse';
 }
 /** Sticky-note: a colored card with auto-sizing text */
 export interface StickyNoteElement extends NoteboardElementBase, ShapeTextFields {
@@ -184,10 +200,7 @@ export interface StickyNoteElement extends NoteboardElementBase, ShapeTextFields
     noteColor: string;
 }
 
-/**
- * @deprecated Legacy serialized-board compatibility only. Frames are no longer
- * available as an authoring tool, but old boards continue to render and save.
- */
+/** A movable container with explicit child membership. */
 export interface FrameElement extends NoteboardElementBase {
     type: 'frame';
     name: string;

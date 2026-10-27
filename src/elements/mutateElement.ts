@@ -82,12 +82,17 @@ export function duplicateElement<T extends NoteboardElement>(
     element: T,
     offset: number = 10,
 ): T {
+    const id = generateId();
     const duplicate = mutateElement(element, {
-        id: generateId(),
+        id,
         x: element.x + offset,
         y: element.y + offset,
+        ...(element.link?.kind === 'object' && element.link.target === element.id
+            ? { link: { ...element.link, target: id } }
+            : {}),
     } as Partial<T>);
 
+    if (duplicate.type === 'frame') return {...duplicate,childIds:[]} as T;
     if (duplicate.type !== 'line' && duplicate.type !== 'arrow') return duplicate;
     return {
         ...duplicate,
@@ -114,6 +119,9 @@ export function duplicateElements<T extends NoteboardElement>(
             id: idMap.get(element.id)!,
             x: element.x + offset,
             y: element.y + offset,
+            ...(element.link?.kind === 'object' && idMap.has(element.link.target)
+                ? { link: { ...element.link, target: idMap.get(element.link.target)! } }
+                : {}),
             ...(element.groupId
                 ? {
                     groupId: (() => {
@@ -128,6 +136,7 @@ export function duplicateElements<T extends NoteboardElement>(
                 : {}),
         } as Partial<T>);
 
+        if (duplicate.type === 'frame') return {...duplicate,childIds:(duplicate.childIds??[]).map(id=>idMap.get(id)).filter((id):id is string=>!!id)} as T;
         if (duplicate.type !== 'line' && duplicate.type !== 'arrow') return duplicate;
 
         const remapBinding = (binding: typeof duplicate.startBinding) => {

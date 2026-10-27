@@ -1,3 +1,5 @@
+export { moveKeyboardCursor, nextKeyboardElement } from './keyboardGeometry';
+export { createConnectedSibling, frameSelection, moveFrameChildren } from './editingActions';
 export { Noteboard } from './Noteboard';
 export { Toolbar } from './components/Toolbar';
 export { SettingsPanel } from './components/SettingsPanel';
@@ -34,3 +36,11 @@ export { exportBoardImage, renderBoardImage } from './exportImage';
 export type { BoardImageOptions } from './exportImage';
 export { createBoardTemplate } from './templates';
 export type { BoardTemplate } from './templates';
+
+export { routeOrthogonal } from './elements/connectorRouting';
+export { connectorRouteWarnings } from './elements/connectorRouting';
+export * from './boardWorkflows';
+export * from './boardMetadata';
+export * from './collaborationWorkflows';
+export * from './textDrafts';
+export { measureTextElement } from './textGeometry';

@@ -191,7 +191,7 @@ export function createStickyNoteElement(
     } as StickyNoteElement;
 }
 
-/** @deprecated Frames are retained only for legacy serialized-board compatibility. */
+/** Create a frame with explicit child membership. */
 export function createFrameElement(
     overrides: Partial<FrameElement> = {},
 ): FrameElement {

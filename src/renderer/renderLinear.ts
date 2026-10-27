@@ -3,6 +3,7 @@ import { getLinearElementAbsolutePoints, getArrowheadPoints, getLineAngle } from
 import { seededRandom, jitterPoint, drawJitteredLine } from './utils';
 function renderOrthogonalLine(ctx: CanvasRenderingContext2D, pts: Point[]) {
     if (pts.length < 2) return;
+    if (pts.length > 2) { ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for (const p of pts.slice(1)) ctx.lineTo(p.x,p.y); ctx.stroke(); return; }
     const p0 = pts[0], pn = pts[pts.length - 1];
     const midX = (p0.x + pn.x) / 2;
     ctx.beginPath();

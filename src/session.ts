@@ -1,6 +1,7 @@
 import type { NoteboardElement } from './elements/types';
 import { createElement } from './elements/createElement';
 import { MAX_ZOOM, MIN_ZOOM } from './constants';
+import { validateElementMetadata } from './boardMetadata';
 
 export const MAX_BOARD_IMPORT_BYTES = 16 * 1024 * 1024;
 export const MAX_BOARD_ELEMENTS = 10_000;
@@ -69,7 +70,8 @@ const isSafeBinding = (value: unknown) => (
         && typeof value.elementId === 'string'
         && value.elementId.length > 0
         && value.elementId.length <= 256
-        && isSafePoint(value.fixedPoint))
+        && isSafePoint(value.fixedPoint)
+        && isOptionalString(value.portId, 256))
 );
 
 const validateTextStyleFields = (value: Record<string, unknown>, index: number) => {
@@ -97,6 +99,7 @@ const validateTextStyleFields = (value: Record<string, unknown>, index: number) 
 
 export const normalizeImportedElement = (value: unknown, index: number): NoteboardElement => {
     if (!isRecord(value)) throw new TypeError(`Element ${index + 1} must be an object`);
+    validateElementMetadata(value);
     if (typeof value.id !== 'string' || !value.id || value.id.length > 256) {
         throw new TypeError(`Element ${index + 1} has an invalid ID`);
     }
@@ -157,6 +160,8 @@ export const normalizeImportedElement = (value: unknown, index: number): Noteboa
         throw new TypeError(`Element ${index + 1} has an invalid lock flag`);
     }
 
+    if (value.hidden !== undefined && typeof value.hidden !== 'boolean') throw new TypeError('Invalid visibility flag');
+    if (!isOptionalString(value.displayName, 256)) throw new TypeError('Invalid object name');
     const type = value.type as NoteboardElement['type'];
     if (type === 'line' || type === 'arrow' || type === 'draw' || type === 'pen') {
         if (
@@ -183,6 +188,7 @@ export const normalizeImportedElement = (value: unknown, index: number): Noteboa
         if (
             !isOptionalEnum(value.curveType, CURVE_TYPES)
             || !isOptionalEnum(value.routing, ROUTING_MODES)
+            || (value.manualRoute !== undefined && typeof value.manualRoute !== 'boolean')
             || !isOptionalEnum(value.startArrowhead, ARROWHEADS)
             || !isOptionalEnum(value.endArrowhead, ARROWHEADS)
             || !isOptionalString(value.label, MAX_TEXT_LENGTH)
@@ -229,7 +235,7 @@ export const normalizeImportedElement = (value: unknown, index: number): Noteboa
     if (type === 'callout' && !isOptionalEnum(value.tailDirection, CALLOUT_DIRECTIONS)) {
         throw new TypeError(`Element ${index + 1} has an invalid callout direction`);
     }
-    if (type === 'image') {
+    if (type === 'image' && !(value.assetId && value.dataUrl === '')) {
         const payload = typeof value.dataUrl === 'string' ? value.dataUrl.slice(value.dataUrl.indexOf(',') + 1) : '';
         if (
             typeof value.dataUrl !== 'string'

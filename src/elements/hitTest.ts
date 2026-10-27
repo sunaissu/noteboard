@@ -237,7 +237,7 @@ export function hitTestElement(
     element: NoteboardElement,
     threshold: number = 10,
 ): boolean {
-    if (element.isDeleted) return false;
+    if (element.isDeleted || element.hidden) return false;
 
     switch (element.type) {
         case 'rectangle':
@@ -260,6 +260,7 @@ export function hitTestElement(
         case 'text':
             return hitTestText(point, element, threshold);
         case 'image':
+            return element.mask === 'ellipse' ? hitTestEllipse(point, element, threshold) : hitTestRectangle(point, element, threshold);
         case 'sticky-note':
         case 'frame':
             return hitTestRectangle(point, element, threshold);

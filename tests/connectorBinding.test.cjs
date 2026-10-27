@@ -270,9 +270,10 @@ test('connector binding metadata survives session serialization', () => {
     assert.deepEqual(hydrated.elements[1].startBinding, snap.binding);
 });
 
-test('retired frames are not authoring tools and remaining advanced tools create safely', () => {
-    assert.equal(ALL_TOOLS.includes('frame'), false);
-    assert.equal(TOOL_REGISTRY.frame, undefined);
+test('frames and advanced tools are available for authoring', () => {
+    assert.equal(ALL_TOOLS.includes('frame'), true);
+    assert.equal(TOOL_REGISTRY.frame.id, 'frame');
+    assert.equal(createElement('frame').type, 'frame');
     assert.equal(createElement('sticky-note').type, 'sticky-note');
     assert.equal(createElement('callout').type, 'callout');
 });
