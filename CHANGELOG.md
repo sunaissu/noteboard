@@ -15,10 +15,23 @@ This is a local release candidate, not a published version. The shared Yjs text 
 
 ### Changed
 
+- Board saving and recovery belong to the host app. Removed package-managed board autosave, the previous-board recovery prompt, and the recovery adapter API.
+- Phone properties use vertical controls and a category selector. Dialog Close, workspace navigation, search, and preview/export actions stay visible while content scrolls. Dialog content supports keyboard scrolling and focus restoration.
+- Dialogs and native controls follow the selected theme. Fixed narrow export/layers layouts and touch properties actions, and improved text contrast and long-content wrapping. Added a light/dark screen-size matrix for Chrome, Firefox and WebKit.
 - Shared labels use Y.Text; migrate authoritative documents before admitting updated clients. Local navigation is now the default.
 - All four property panel positions use the same controls, with scrolling and responsive layouts.
 
 ### Added
+
+- Optional native/custom/hidden scrollbars for board panels and host containers, with theme and color-scheme controls in the playground.
+- Completed workspace catalogs, bookmarks, layouts/import/recognition previews, links/ports/crops, style presets, host content/version/collaboration adapters, voting/timers, presentation, text intent recovery and external clipboard.
+- Added vector and multipage PDF with custom paper sizes, plus a review checklist and three-engine workflow suites.
+
+- Keyboard Canvas with a visible cursor, point-to-point drawing, object cycling, additive selection, text editing, grouped movement undo and properties access.
+- Immediate per-tool properties, searchable commands, layers with names/visibility/reordering, frames with movable contents, and quick-connect handles.
+- Obstacle-aware elbow routing, manual bends, keyboard endpoint fields, touch pan/pinch and optional finger drawing.
+- Previewed SVG and single-page image PDF downloads.
+- Control labels, focus outlines, touch targets and reduced-motion styles.
 
 - Object search, board overview, session viewpoints, and focusElements.
 - Clean content exports with region selection and asynchronous image loading.

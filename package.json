@@ -1,14 +1,19 @@
 {
   "name": "@sunaissu/noteboard",
-  "version": "3.0.0-rc.1",
-  "description": "A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.",
+  "version": "3.0.0-rc.2",
+  "description": "A React whiteboard component with drawing, diagram tools, document and calculation integrations, and optional collaboration adapters.",
   "keywords": [
     "react",
     "canvas",
     "whiteboard",
     "drawing",
     "noteboard",
-    "diagram"
+    "diagram",
+    "typescript",
+    "react-component",
+    "diagramming",
+    "yjs",
+    "whiteboard-component"
   ],
   "homepage": "https://github.com/sunaissu/noteboard#readme",
   "bugs": {

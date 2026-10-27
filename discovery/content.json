@@ -1,0 +1,55 @@
+{
+  "name": "Noteboard",
+  "title": "React whiteboard for drawing, diagrams and host integrations",
+  "description": "A React whiteboard component with drawing, diagram tools, document and calculation integrations, and optional collaboration adapters.",
+  "packageName": "@sunaissu/noteboard",
+  "output": "playground/dist",
+  "mainMetadata": true,
+  "sections": [
+    {
+      "heading": "What can I build?",
+      "paragraphs": [
+        "Embed a drawing or diagram workspace in a React application. Noteboard supports board views, reusable elements and optional document, calculation and media integrations."
+      ]
+    },
+    {
+      "heading": "How do I install it?",
+      "paragraphs": [
+        "React and React DOM 18 or newer are peer dependencies. Follow the repository documentation for controlled data and host adapters."
+      ],
+      "code": "npm install @sunaissu/noteboard\nimport { Noteboard } from \"@sunaissu/noteboard\";"
+    },
+    {
+      "heading": "Does collaboration come with a server?",
+      "paragraphs": [
+        "No. Yjs and collaboration adapters connect to services supplied by the host. The playground's local room demonstrates interactions in memory; it is not a durable online collaboration backend."
+      ]
+    },
+    {
+      "heading": "Where is data saved?",
+      "paragraphs": [
+        "The playground uses browser storage and local examples. Production applications must configure storage, enforce access permissions and handle recovery themselves."
+      ]
+    },
+    {
+      "heading": "Which version is demonstrated?",
+      "paragraphs": [
+        "The playground uses the repository source and may contain features not yet published on npm. Check package versions and dist-tags before integrating."
+      ]
+    }
+  ],
+  "links": [
+    {
+      "label": "npm package",
+      "url": "https://www.npmjs.com/package/@sunaissu/noteboard"
+    },
+    {
+      "label": "Source repository",
+      "url": "https://github.com/sunaissu/noteboard"
+    },
+    {
+      "label": "Installation and API documentation",
+      "url": "https://github.com/sunaissu/noteboard#readme"
+    }
+  ]
+}
