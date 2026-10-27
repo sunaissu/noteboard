@@ -22,7 +22,7 @@ export function getSelectionBounds(
     elements: NoteboardElement[],
     ids: Set<string>,
 ): Bounds | null {
-    const selected = elements.filter((el) => ids.has(el.id) && !el.isDeleted);
+    const selected = elements.filter((el) => ids.has(el.id) && !el.isDeleted && !el.hidden);
     if (selected.length === 0) return null;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -115,13 +115,13 @@ export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<s
     const expanded = new Set(
         [...ids].filter((id) => {
             const element = elements.find((candidate) => candidate.id === id);
-            return element && !element.isDeleted && !element.locked;
+            return element && !element.isDeleted && !element.hidden && !element.locked;
         }),
     );
     for (const id of expanded) {
         const el = elements.find((e) => e.id === id);
         if (el?.groupId) {
-            for (const m of elements.filter((e) => e.groupId === el.groupId && !e.isDeleted && !e.locked)) {
+            for (const m of elements.filter((e) => e.groupId === el.groupId && !e.isDeleted && !e.hidden && !e.locked)) {
                 expanded.add(m.id);
             }
         }
@@ -129,10 +129,10 @@ export function expandSelectionToGroups(elements: NoteboardElement[], ids: Set<s
     return expanded;
 }
 
-export type DrawTool = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'line' | 'arrow' | 'pen' | 'sticky-note' | 'star' | 'callout';
+export type DrawTool = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'line' | 'arrow' | 'pen' | 'sticky-note' | 'star' | 'callout' | 'frame';
 
 export function isDrawingTool(tool: string): tool is DrawTool {
-    return ['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow', 'pen', 'sticky-note', 'star', 'callout'].includes(tool);
+    return ['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow', 'pen', 'sticky-note', 'star', 'callout', 'frame'].includes(tool);
 }
 
 export interface KeyboardShortcutLike {

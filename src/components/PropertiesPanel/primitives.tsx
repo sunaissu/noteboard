@@ -112,7 +112,7 @@ export function ColorRow({
                     <button type="button"
                         key={c}
                         onClick={() => onChange(c)}
-                        title={c}
+                        title={c} aria-label={label+' '+c} aria-pressed={value===c}
                         style={{
                             width: 20, height: 20, borderRadius: 4, padding: 0, cursor: 'pointer', flexShrink: 0,
                             border: value === c
@@ -130,7 +130,7 @@ export function ColorRow({
                     overflow: 'hidden', cursor: 'pointer', position: 'relative', flexShrink: 0,
                 }}>
                     <input
-                        type="color"
+                        type="color" aria-label={label+' custom color'}
                         value={value === 'transparent' ? '#ffffff' : value}
                         onChange={(e) => onChange(e.target.value)}
                         style={{ position: 'absolute', top: -4, left: -4, width: 28, height: 28, border: 'none', cursor: 'pointer', opacity: 0 }}
@@ -166,10 +166,10 @@ export function ChoiceRow<T extends string>({
                 {icon}
                 <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>{label}</span>
             </div>
-            <div style={{ display: 'flex', gap: 2 }}>
+            <div role="group" aria-label={label} style={{ display: 'flex', gap: 2, flexWrap:'wrap' }}>
                 {options.map((opt) => (
                     <button type="button"
-                        key={opt.value}
+                        key={opt.value} aria-pressed={value===opt.value}
                         onClick={() => onChange(opt.value)}
                         style={{
                             flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 500,
@@ -218,7 +218,7 @@ export function SliderRow({
                 </span>
             </div>
             <input
-                type="range" min={min} max={max} step={step} value={value}
+                type="range" aria-label={label} min={min} max={max} step={step} value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
                 style={{ width: '100%', accentColor: theme.buttonActiveColor, cursor: 'pointer' }}
             />
@@ -244,7 +244,7 @@ export function ToggleRow({
             {icon}
             <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500, flex: 1 }}>{label}</span>
             <button type="button"
-                onClick={() => onChange(!checked)}
+                role="switch" aria-label={label} aria-checked={checked} onClick={() => onChange(!checked)}
                 style={{
                     width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
                     background: checked ? theme.buttonActiveBg : `${theme.panelMutedColor}44`,

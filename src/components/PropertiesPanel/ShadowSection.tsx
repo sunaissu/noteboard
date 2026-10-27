@@ -51,7 +51,7 @@ export function ShadowSection({ selectedElements, onUpdate }: Props) {
                             <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Shadow Color</span>
                             <div style={{ marginTop: 6 }}>
                                 <input
-                                    type="color"
+                                    type="color" aria-label="Shadow color"
                                     value={shadowColor.startsWith('rgba') ? '#000000' : shadowColor}
                                     onChange={(e) => updateShadow({ color: e.target.value })}
                                     style={{ width: '100%', height: 28, borderRadius: 6, border: theme.panelBorder, cursor: 'pointer', padding: 2 }}

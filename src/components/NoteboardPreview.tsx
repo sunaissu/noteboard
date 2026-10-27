@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { renderElement } from '../renderer';
 import type { NoteboardElement } from '../elements/types';
 import { getElementBounds } from '../elements/bounds';
+import { useNoteboardTheme } from '../ThemeContext';
 
 export interface NoteboardPreviewProps {
     elements: NoteboardElement[];
@@ -22,6 +23,7 @@ export function NoteboardPreview({
     padding = 40,
 }: NoteboardPreviewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const theme = useNoteboardTheme();
 
     // These dimensions are only the initial/fallback backing-store size. Once
     // mounted, the canvas tracks its rendered CSS size and device-pixel ratio.
@@ -59,7 +61,7 @@ export function NoteboardPreview({
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const activeElements = elements.filter((element) => !element.isDeleted);
+            const activeElements = elements.filter((element) => !element.isDeleted && !element.hidden);
             if (activeElements.length === 0) return;
 
             let minX = Infinity;
@@ -116,7 +118,7 @@ export function NoteboardPreview({
                 width,
                 height,
                 display: 'block',
-                background: 'var(--color-background-soft, #f5f5f5)',
+                background: theme.canvasBg,
                 ...style,
             }}
         />

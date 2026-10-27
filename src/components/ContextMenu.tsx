@@ -32,10 +32,12 @@ export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) 
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Adjust position so menu stays inside viewport
-    const MENU_W = 200;
-    const MENU_H = items.length * 34;
-    const adjustedX = Math.max(8, Math.min(x, (bounds?.width ?? window.innerWidth) - MENU_W - 8));
-    const adjustedY = Math.max(8, Math.min(y, (bounds?.height ?? window.innerHeight) - MENU_H - 8));
+    const viewportWidth = bounds?.width ?? window.innerWidth;
+    const viewportHeight = bounds?.height ?? window.innerHeight;
+    const menuWidth = Math.max(0, Math.min(200, viewportWidth - 16));
+    const menuHeight = 10 + items.reduce((height, item) => height + (isSeparator(item) ? 9 : 44), 0);
+    const adjustedX = Math.max(8, Math.min(x, viewportWidth - menuWidth - 8));
+    const adjustedY = Math.max(8, Math.min(y, viewportHeight - menuHeight - 8));
 
     useEffect(() => {
         const previousFocus = document.activeElement as HTMLElement | null;
@@ -60,7 +62,7 @@ export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) 
         }, 0);
         return () => {
             clearTimeout(tid);
-            if (previousFocus?.isConnected) previousFocus.focus();
+            if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
             window.removeEventListener('pointerdown', handler);
             window.removeEventListener('keydown', keyHandler);
         };
@@ -79,7 +81,13 @@ export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) 
                 borderRadius: 10,
                 boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
                 padding: '4px 0',
-                minWidth: MENU_W, maxHeight: bounds ? Math.max(40, bounds.height - 16) : 'calc(100vh - 16px)', overflowY: 'auto',
+                width: menuWidth,
+                minWidth: 0,
+                maxWidth: 'calc(100% - 16px)',
+                maxHeight: Math.max(0, viewportHeight - adjustedY - 8),
+                boxSizing: 'border-box',
+                overflowY: 'auto',
+                overscrollBehavior: 'contain',
                 fontFamily: "'Inter', system-ui, sans-serif",
                 pointerEvents: 'auto',
             }}
@@ -105,6 +113,9 @@ export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) 
                             alignItems: 'center',
                             gap: 10,
                             width: '100%',
+                            minHeight: 44,
+                            boxSizing: 'border-box',
+                            touchAction: 'manipulation',
                             padding: '6px 14px',
                             border: 'none',
                             background: 'none',
@@ -123,8 +134,8 @@ export function ContextMenu({ x, y, items, onClose, bounds }: ContextMenuProps) 
                         }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
                     >
-                        {item.icon && <span style={{ fontSize: 14, width: 16, textAlign: 'center' }}>{item.icon}</span>}
-                        <span>{item.label}</span>
+                        {item.icon && <span style={{ fontSize: 14, width: 16, flexShrink: 0, textAlign: 'center' }}>{item.icon}</span>}
+                        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{item.label}</span>
                     </button>
                 );
             })}

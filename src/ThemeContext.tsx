@@ -57,15 +57,15 @@ export const LIGHT_THEME: NoteboardTheme = {
     toolbarBg: '#ffffff',
     toolbarShadow: '0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
     buttonActiveBg: '#e3f2fd',
-    buttonActiveColor: '#1976d2',
+    buttonActiveColor: '#1565c0',
     buttonHoverBg: '#f2f2f2',
     buttonDefaultColor: '#444444',
-    badgeColor: '#999999',
+    badgeColor: '#666666',
 
     panelBg: '#ffffff',
     panelBorder: '1px solid rgba(0,0,0,0.08)',
     panelTextColor: '#1e1e1e',
-    panelMutedColor: '#888888',
+    panelMutedColor: '#666666',
 
     textInputColor: '#1e1e1e',
 };
@@ -86,7 +86,7 @@ export const DARK_THEME: NoteboardTheme = {
     buttonActiveColor: '#90caf9',
     buttonHoverBg: '#3a3a3a',
     buttonDefaultColor: '#cccccc',
-    badgeColor: '#777777',
+    badgeColor: '#aaaaaa',
 
     panelBg: '#2a2a2a',
     panelBorder: '1px solid rgba(255,255,255,0.08)',

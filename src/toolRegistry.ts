@@ -32,6 +32,7 @@ export const TOOL_REGISTRY: Record<Tool, ToolDefinition> = {
     image: { id: 'image', label: 'Image', icon: ImageIcon },
     star: { id: 'star', label: 'Star', icon: StarIcon },
     'sticky-note': { id: 'sticky-note', label: 'Sticky Note', icon: NoteBlankIcon },
+    frame: { id: 'frame', label: 'Frame', icon: RectangleIcon },
     callout: { id: 'callout', label: 'Callout', icon: ChatCircleIcon },
 };
 
@@ -52,5 +53,5 @@ export const DEFAULT_SLOTS: ToolSlot[] = [
 export const ALL_TOOLS: Tool[] = [
     'select', 'pan', 'rectangle', 'ellipse', 'diamond', 'triangle',
     'line', 'text', 'arrow', 'eraser', 'pen', 'image',
-    'star', 'sticky-note', 'callout',
+    'star', 'sticky-note', 'callout', 'frame',
 ];

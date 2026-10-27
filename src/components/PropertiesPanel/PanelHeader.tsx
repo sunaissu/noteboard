@@ -29,9 +29,8 @@ export function PanelHeader({
     const ibs = (active = false) => iconBtnStyle(theme, active);
 
     return (
-        <div style={{ padding: compact ? 0 : '6px 10px', borderBottom: compact ? undefined : theme.panelBorder, flexShrink: 0 }}>
-            {/* Z-order, group, lock — all in one row */}
-            <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <div style={{ padding: compact ? 0 : '6px 10px', borderBottom: compact ? undefined : theme.panelBorder, flexShrink: 0, maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', flexWrap:'wrap', gap: 2, alignItems: 'center' }}>
                 <button type="button" onClick={onBringToFront} title="Bring to Front" style={ibs()}><ArrowFatLineUpIcon size={14} /></button>
                 <button type="button" onClick={onBringForward} title="Bring Forward" style={ibs()}><ArrowFatUpIcon size={14} /></button>
                 <button type="button" onClick={onSendBackward} title="Send Backward" style={ibs()}><ArrowFatDownIcon size={14} /></button>

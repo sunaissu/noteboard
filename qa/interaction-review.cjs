@@ -71,8 +71,8 @@ const assert = require('node:assert/strict');
   for (const position of ['top', 'bottom']) {
    await page.setViewportSize({ width: 390, height: 844 }); await openBoard(position);
    assert.ok((await panel.boundingBox()).height <= 220);
-   for (const tab of await panel.getByRole('tab').all()) { await tab.click(); await expect(tab).toHaveAttribute('aria-selected', 'true'); }
-   await panel.getByRole('tab', { name: 'Appearance', exact: true }).click();
+   for(const category of ['appearance','text','shadow']) { await panel.getByLabel('Property category').selectOption(category);await expect(panel.getByLabel('Property category')).toHaveValue(category); }
+   await panel.getByLabel('Property category').selectOption('appearance');
    await page.evaluate(() => scrollTo(0, 0));
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
    await page.screenshot({ path: 'qa/artifacts/properties-compact-mobile-' + position + '.png' });

@@ -10,6 +10,7 @@ export function useToolbarShortcuts(
         if (!onToolSelect || !enabled) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || (e.target as HTMLElement)?.closest('[contenteditable="true"],button,[role="dialog"]')) return;
             const tag = (e.target as HTMLElement)?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 

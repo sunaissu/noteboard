@@ -9,6 +9,8 @@ export interface ToolbarProps {
     propertiesPosition?: PropertiesPosition;
     /** Distance from the board edge when another panel occupies that edge. */
     edgeOffset?: number;
+    /** Board-relative bounds for the other edges; edgeOffset controls the chosen edge. */
+    viewportInsets?: Partial<Record<ToolbarPosition, number>>;
     activeTool?: Tool;
     onToolSelect?: (tool: Tool) => void;
     activeShape?: ShapeVariant;
@@ -27,6 +29,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     position = 'bottom',
     propertiesPosition,
     edgeOffset,
+    viewportInsets,
     activeTool,
     onToolSelect,
     activeShape = 'rectangle',
@@ -41,15 +44,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     const sortedSlots = [...slots].sort((a, b) => a.position - b.position);
 
     return (
-        <div style={wrapperStyle(position, propertiesPosition, edgeOffset)}>
+        <div style={wrapperStyle(position, propertiesPosition, edgeOffset, viewportInsets)}>
             <div
                 data-noteboard-toolbar
+                data-scroll-axis={isVertical ? 'vertical' : 'horizontal'}
                 style={{
                     display: 'flex',
                     flexDirection: isVertical ? 'column' : 'row',
                     gap: 2,
-                    maxWidth: 'calc(100% - 24px)', maxHeight: 'calc(100% - 24px)',
-                    flexWrap: isVertical ? 'nowrap' : 'wrap', justifyContent: 'center', overflow: 'auto',
+                    width: 'max-content',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    minWidth: 0,
+                    minHeight: 0,
+                    boxSizing: 'border-box',
+                    flex: '0 1 auto',
+                    flexWrap: 'nowrap',
+                    justifyContent: 'flex-start',
+                    alignContent: 'flex-start',
+                    overflow: 'auto',
+                    scrollPadding: 4,
                     overscrollBehavior: 'contain',
                     padding: 4,
                     borderRadius: 10,
@@ -64,10 +78,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         <button type="button"
                             onClick={onUndo}
                             disabled={!canUndo}
-                            title="Undo (Ctrl+Z)"
+                            title="Undo (Ctrl+Z)" aria-label="Undo"
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 36, height: 36, border: 'none', borderRadius: 8,
+                                width: 44, height: 44, flex: '0 0 auto', padding: 0,
+                                touchAction: 'manipulation', border: 'none', borderRadius: 8,
                                 cursor: canUndo ? 'pointer' : 'not-allowed',
                                 background: 'transparent',
                                 color: canUndo ? theme.buttonDefaultColor : theme.badgeColor,
@@ -82,10 +97,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         <button type="button"
                             onClick={onRedo}
                             disabled={!canRedo}
-                            title="Redo (Ctrl+Shift+Z)"
+                            title="Redo (Ctrl+Shift+Z)" aria-label="Redo"
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 36, height: 36, border: 'none', borderRadius: 8,
+                                width: 44, height: 44, flex: '0 0 auto', padding: 0,
+                                touchAction: 'manipulation', border: 'none', borderRadius: 8,
                                 cursor: canRedo ? 'pointer' : 'not-allowed',
                                 background: 'transparent',
                                 color: canRedo ? theme.buttonDefaultColor : theme.badgeColor,
@@ -97,7 +113,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         >
                             ↪
                         </button>
-                        <div style={{ width: 1, height: 20, background: theme.panelBorder.replace('1px solid ', ''), margin: isVertical ? '4px 8px' : '8px 4px', alignSelf: 'center' }} />
+                        <div style={{ width: isVertical ? 20 : 1, height: isVertical ? 1 : 20, flex: '0 0 auto', background: theme.panelBorder.replace('1px solid ', ''), margin: isVertical ? '4px 0' : '0 4px', alignSelf: 'center' }} />
                     </>
                 )}
                 {sortedSlots.map((slot) => {
@@ -115,7 +131,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
                     return (
                         <button type="button"
-                            key={slot.position}
+                            key={slot.position} aria-label={def.label} aria-pressed={isActive}
                             onClick={() => onToolSelect?.(clickTool)}
                             title={`${def.label} (${positionToKey(slot.position)})`}
                             style={{
@@ -123,8 +139,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 36,
-                                height: 36,
+                                width: 44,
+                                height: 44,
+                                flex: '0 0 auto',
+                                padding: 0,
+                                touchAction: 'manipulation',
                                 border: 'none',
                                 borderRadius: 8,
                                 cursor: 'pointer',
@@ -166,26 +185,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     );
 };
 
-const wrapperStyle = (position: ToolbarPosition, propsPos?: PropertiesPosition, edgeOffset?: number): React.CSSProperties => {
+const wrapperStyle = (
+    position: ToolbarPosition,
+    propsPos?: PropertiesPosition,
+    edgeOffset?: number,
+    viewportInsets: Partial<Record<ToolbarPosition, number>> = {},
+): React.CSSProperties => {
     const base: React.CSSProperties = {
         position: 'absolute',
         display: 'flex',
+        flexDirection: 'column',
+        top: Math.max(12, viewportInsets.top ?? 12),
+        right: Math.max(12, viewportInsets.right ?? 12),
+        bottom: Math.max(12, viewportInsets.bottom ?? 12),
+        left: Math.max(12, viewportInsets.left ?? 12),
+        minWidth: 0,
+        minHeight: 0,
         zIndex: 1000,
         pointerEvents: 'none',
     };
     // When sharing the same edge with the properties panel, push toolbar
     // inward so the properties panel can sit on the outer edge.
     const sameEdge = propsPos === position;
-    const offset = edgeOffset ?? (sameEdge ? 60 : 12);
+    const offset = Math.max(12, edgeOffset ?? (sameEdge ? 60 : 12));
 
     switch (position) {
         case 'top':
-            return { ...base, top: offset, left: 0, right: 48, justifyContent: 'center' };
+            return { ...base, top: offset, alignItems: 'center', justifyContent: 'flex-start' };
         case 'bottom':
-            return { ...base, bottom: offset, left: 0, right: 0, justifyContent: 'center' };
+            return { ...base, bottom: offset, alignItems: 'center', justifyContent: 'flex-end' };
         case 'left':
-            return { ...base, left: offset, top: 0, bottom: 0, alignItems: 'center' };
+            return { ...base, left: offset, alignItems: 'flex-start', justifyContent: 'center' };
         case 'right':
-            return { ...base, right: offset, top: 0, bottom: 0, alignItems: 'center' };
+            return { ...base, right: offset, alignItems: 'flex-end', justifyContent: 'center' };
     }
 };

@@ -10,14 +10,15 @@ interface Props {
     size: { width: number; height: number };
     onFocus: (ids: string[]) => void;
     onViewport: (viewport: NoteboardViewport) => void;
+    onWorkspace?:()=>void;
 }
-export function BoardNavigator({ elements, viewport, size, onFocus, onViewport }: Props) {
+export function BoardNavigator({ elements, viewport, size, onFocus, onViewport, onWorkspace }: Props) {
     const theme = useNoteboardTheme();
     const [query, setQuery] = useState('');
     const [bookmarks, setBookmarks] = useState<{ name: string; viewport: NoteboardViewport }[]>([]);
     const [name, setName] = useState('');
     const svg = useRef<SVGSVGElement>(null);
-    const active = useMemo(() => elements.filter(element => !element.isDeleted), [elements]);
+    const active = useMemo(() => elements.filter(element => !element.isDeleted && !element.hidden), [elements]);
     const bounds = useMemo(() => active.map(element => getElementBounds(element)), [active]);
     const box = useMemo(() => {
         if (!bounds.length) return [0, 0, 400, 300];
@@ -44,8 +45,10 @@ export function BoardNavigator({ elements, viewport, size, onFocus, onViewport }
             {!matches.length && <span>No matching objects</span>}
             {matches.length > 200 && <small>Showing 200 matches. Refine your search.</small>}
         </div>
+        {onWorkspace?<button type="button" style={control} onClick={onWorkspace}>Manage saved viewpoints and selections</button>:<>
         <input aria-label="Viewpoint name" placeholder="Name this viewpoint" value={name} onChange={event => setName(event.target.value)} style={control} />
         <button type="button" disabled={!name.trim() || bookmarks.length >= 20} style={{ ...control, margin: '6px 0', cursor: 'pointer' }} onClick={() => { setBookmarks(previous => [...previous, { name: name.trim(), viewport: { ...viewport } }]); setName(''); }}>Save viewpoint for this session</button>
         {bookmarks.map((bookmark, index) => <div key={index} style={{ display: 'flex', gap: 4, marginBottom: 4 }}><button type="button" style={control} onClick={() => onViewport(bookmark.viewport)}>{bookmark.name}</button><button type="button" aria-label={`Remove ${bookmark.name} viewpoint`} style={{ ...control, width: 30 }} onClick={() => setBookmarks(previous => previous.filter((_, item) => item !== index))}>×</button></div>)}
+        </>}
     </details>;
 }

@@ -1,7 +1,7 @@
 import { TextAaIcon, TextAlignLeftIcon, TextAlignCenterIcon, TextAlignRightIcon, HighlighterIcon, WaveTriangleIcon } from '@phosphor-icons/react';
 import { useNoteboardTheme } from '../../ThemeContext';
 import type { NoteboardElement, TextElement } from '../../elements/types';
-import { hasShapeText } from '../../elements/types';
+import { isShapeElement } from '../../elements/types';
 import { Divider, CollapsibleSection, SliderRow, iconBtnStyle, FONT_FAMILIES } from './primitives';
 
 interface Props {
@@ -21,7 +21,7 @@ const HIGHLIGHT_COLORS = [
 export function TextSection({ selectedElements, onUpdate }: Props) {
     const theme = useNoteboardTheme();
 
-    const textEl = selectedElements.find((el) => el.type === 'text' || hasShapeText(el));
+    const textEl = selectedElements.find((el) => el.type === 'text' || isShapeElement(el));
     const fontSize = textEl ? ((textEl as any).fontSize ?? 14) : 14;
     const fontFamily = textEl ? ((textEl as any).fontFamily ?? 'Inter, sans-serif') : 'Inter, sans-serif';
     const textAlign = textEl ? ((textEl as any).textAlign ?? 'left') : 'left';
@@ -47,7 +47,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                         style={{ width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer', background: theme.buttonHoverBg, color: theme.panelTextColor, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         −
                     </button>
-                    <input type="number" min={8} max={120} value={fontSize}
+                    <input aria-label="Font size" type="number" min={8} max={120} value={fontSize}
                         onChange={(e) => onUpdate({ fontSize: Number(e.target.value) } as any)}
                         style={{ width: 48, height: 28, borderRadius: 6, border: theme.panelBorder, background: 'transparent', color: theme.panelTextColor, textAlign: 'center', fontSize: 12, fontWeight: 500, outline: 'none' }} />
                     <button type="button" onClick={() => onUpdate({ fontSize: Math.min(120, fontSize + 2) } as any)}
@@ -62,7 +62,7 @@ export function TextSection({ selectedElements, onUpdate }: Props) {
                     <TextAaIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Family</span>
                 </div>
-                <select value={fontFamily} onChange={(e) => onUpdate({ fontFamily: e.target.value } as any)}
+                <select aria-label="Font family" value={fontFamily} onChange={(e) => onUpdate({ fontFamily: e.target.value } as any)}
                     style={{ width: '100%', fontSize: 12, borderRadius: 6, padding: '4px 6px', border: theme.panelBorder, background: theme.panelBg, color: theme.panelTextColor, cursor: 'pointer', outline: 'none', fontFamily }}>
                     {FONT_FAMILIES.map((ff) => (
                         <option key={ff.value} value={ff.value} style={{ fontFamily: ff.value }}>{ff.label}</option>

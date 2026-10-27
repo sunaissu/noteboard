@@ -4,13 +4,14 @@ import { useNoteboardTheme } from '../ThemeContext';
 interface ZoomHUDProps {
     zoom: number;
     bottom?: number;
+    right?: number;
     onZoomIn: () => void;
     onZoomOut: () => void;
     onReset: () => void;
     onFitAll: () => void;
 }
 
-export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHUDProps) {
+export function ZoomHUD({ bottom = 56, right = 12, zoom, onZoomIn, onZoomOut, onReset, onFitAll }: ZoomHUDProps) {
     const theme = useNoteboardTheme();
     const pct = Math.round(zoom * 100);
 
@@ -21,8 +22,10 @@ export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFit
         color: theme.panelTextColor,
         fontSize: 14,
         fontWeight: 700,
-        width: 26,
-        height: 26,
+        width: 44,
+        minWidth: 44,
+        height: 44,
+        touchAction: 'manipulation',
         borderRadius: 6,
         display: 'flex',
         alignItems: 'center',
@@ -42,7 +45,7 @@ export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFit
             style={{
                 position: 'absolute',
                 bottom,
-                right: 12,
+                right,
                 zIndex: 1000,
                 display: 'flex',
                 alignItems: 'center',
@@ -58,12 +61,12 @@ export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFit
             }}
             onPointerDown={(e) => e.stopPropagation()}
         >
-            <button type="button" style={btn} onClick={onZoomOut} title="Zoom out (Ctrl+−)"
+            <button type="button" style={btn} onClick={onZoomOut} title="Zoom out (Ctrl+−)" aria-label="Zoom out"
                 onMouseEnter={e => hoverStyle(e, true)} onMouseLeave={e => hoverStyle(e, false)}>−</button>
 
             <button type="button"
                 onClick={onReset}
-                title="Reset zoom to 100%"
+                title="Reset zoom to 100%" aria-label={'Zoom '+pct+' percent. Reset zoom to 100 percent'}
                 onMouseEnter={e => hoverStyle(e, true)}
                 onMouseLeave={e => hoverStyle(e, false)}
                 style={{
@@ -79,7 +82,7 @@ export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFit
                 {pct}%
             </button>
 
-            <button type="button" style={btn} onClick={onZoomIn} title="Zoom in (Ctrl++)"
+            <button type="button" style={btn} onClick={onZoomIn} title="Zoom in (Ctrl++)" aria-label="Zoom in"
                 onMouseEnter={e => hoverStyle(e, true)} onMouseLeave={e => hoverStyle(e, false)}>+</button>
 
             <div style={{ width: 1, height: 16, background: theme.panelBorder, margin: '0 2px' }} />
@@ -87,7 +90,7 @@ export function ZoomHUD({ bottom = 56, zoom, onZoomIn, onZoomOut, onReset, onFit
             <button type="button"
                 style={{ ...btn, fontSize: 11, width: 'auto', padding: '0 4px' }}
                 onClick={onFitAll}
-                title="Fit all elements (Ctrl+0)"
+                title="Fit all elements (Ctrl+0)" aria-label="Fit all elements"
                 onMouseEnter={e => hoverStyle(e, true)}
                 onMouseLeave={e => hoverStyle(e, false)}
             >

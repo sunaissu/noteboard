@@ -4,6 +4,9 @@ import { TOOL_REGISTRY, SHAPE_VARIANTS } from '../toolRegistry';
 import type { Tool, ShapeVariant, ToolbarPosition } from '../types';
 
 export interface ShapePickerProps {
+    edgeOffset?: number;
+    /** Board-relative bounds for the other edges; edgeOffset controls the chosen edge. */
+    viewportInsets?: Partial<Record<ToolbarPosition, number>>;
     activeShape: ShapeVariant;
     activeTool: Tool;
     onSelectShape: (shape: ShapeVariant) => void;
@@ -29,46 +32,53 @@ for (const [key, shape] of Object.entries(SHAPE_KEYS)) {
 }
 
 /** Position the picker adjacent to the toolbar based on its position. */
-const getPickerStyle = (pos: ToolbarPosition): React.CSSProperties => {
+const getPickerStyle = (
+    pos: ToolbarPosition,
+    offset = 72,
+    viewportInsets: Partial<Record<ToolbarPosition, number>> = {},
+): React.CSSProperties => {
     const base: React.CSSProperties = {
         position: 'absolute',
         zIndex: 1001,
         display: 'flex',
-        pointerEvents: 'auto',
+        flexDirection: 'column',
+        top: Math.max(12, viewportInsets.top ?? 12),
+        right: Math.max(12, viewportInsets.right ?? 12),
+        bottom: Math.max(12, viewportInsets.bottom ?? 12),
+        left: Math.max(12, viewportInsets.left ?? 12),
+        minWidth: 0,
+        minHeight: 0,
+        pointerEvents: 'none',
     };
 
     switch (pos) {
         case 'bottom':
             return {
                 ...base,
-                bottom: 62,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                flexDirection: 'row',
+                bottom: Math.max(12, offset),
+                alignItems: 'center',
+                justifyContent: 'flex-end',
             };
         case 'top':
             return {
                 ...base,
-                top: 62,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                flexDirection: 'row',
+                top: Math.max(12, offset),
+                alignItems: 'center',
+                justifyContent: 'flex-start',
             };
         case 'left':
             return {
                 ...base,
-                left: 62,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                flexDirection: 'column',
+                left: Math.max(12, offset),
+                alignItems: 'flex-start',
+                justifyContent: 'center',
             };
         case 'right':
             return {
                 ...base,
-                right: 62,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                flexDirection: 'column',
+                right: Math.max(12, offset),
+                alignItems: 'flex-end',
+                justifyContent: 'center',
             };
     }
 };
@@ -77,16 +87,32 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
     activeShape,
     activeTool,
     onSelectShape,
-    toolbarPosition,
+    toolbarPosition, edgeOffset, viewportInsets,
 }) => {
     const theme = useNoteboardTheme();
+    const isVertical = toolbarPosition === 'left' || toolbarPosition === 'right';
 
     if (!isShapeTool(activeTool)) return null;
 
     return (
-        <div
+        <div style={getPickerStyle(toolbarPosition, edgeOffset, viewportInsets)}>
+            <div data-noteboard-shapes
+            data-scroll-axis={isVertical ? 'vertical' : 'horizontal'}
             style={{
-                ...getPickerStyle(toolbarPosition),
+                display: 'flex',
+                flexDirection: isVertical ? 'column' : 'row',
+                width: 'max-content',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                minWidth: 0,
+                minHeight: 0,
+                boxSizing: 'border-box',
+                flex: '0 1 auto',
+                flexWrap: 'nowrap',
+                overflow: 'auto',
+                scrollPadding: 4,
+                overscrollBehavior: 'contain',
+                pointerEvents: 'auto',
                 gap: 2,
                 padding: 4,
                 borderRadius: 10,
@@ -106,14 +132,17 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                     <button type="button"
                         key={shape}
                         onClick={() => onSelectShape(shape)}
-                        title={keyLabel ? `${def.label} (${keyLabel})` : def.label}
+                        aria-label={def.label} aria-pressed={activeTool===def.id} title={keyLabel ? `${def.label} (${keyLabel})` : def.label}
                         style={{
                             position: 'relative',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: 36,
-                            height: 36,
+                            width: 44,
+                            height: 44,
+                            flex: '0 0 auto',
+                            padding: 0,
+                            touchAction: 'manipulation',
                             border: 'none',
                             borderRadius: 8,
                             cursor: 'pointer',
@@ -152,6 +181,7 @@ export const ShapePicker: React.FC<ShapePickerProps> = ({
                     </button>
                 );
             })}
+            </div>
         </div>
     );
 };

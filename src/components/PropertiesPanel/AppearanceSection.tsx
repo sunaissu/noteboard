@@ -112,7 +112,7 @@ export function AppearanceSection({
                     <CopyIcon size={14} weight="bold" style={{ color: theme.panelMutedColor }} />
                     <span style={{ fontSize: 12, color: theme.panelTextColor, fontWeight: 500 }}>Blend Mode</span>
                 </div>
-                <select
+                <select aria-label="Blend mode"
                     value={blendMode}
                     onChange={(e) => onUpdate({ blendMode: e.target.value as BlendMode })}
                     style={{

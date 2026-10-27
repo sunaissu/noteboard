@@ -4,6 +4,8 @@ import type { NoteboardResolvedTheme, NoteboardThemeMode } from '../ThemeContext
 import { List, X, Moon, Sun, Monitor, FloppyDisk, DownloadSimple, Trash, GridNine, Export, UploadSimple } from '@phosphor-icons/react';
 
 export interface SettingsPanelProps {
+    /** Board-relative inset for the launcher when a panel occupies the right edge. */
+    right?: number;
     children?: React.ReactNode;
     themeMode: NoteboardThemeMode;
     resolvedTheme: NoteboardResolvedTheme;
@@ -21,6 +23,7 @@ export interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
+    right = 12,
     children,
     themeMode,
     resolvedTheme,
@@ -39,6 +42,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const [open, setOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (open) panelRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    }, [open]);
 
     // Close on click-outside
     useEffect(() => {
@@ -63,14 +70,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <button type="button"
                 ref={buttonRef}
                 onClick={() => setOpen((v) => !v)}
-                title="Settings" aria-expanded={open}
+                title="Settings" aria-label="Settings" aria-expanded={open}
                 style={{
                     position: 'absolute',
                     top: 12,
-                    right: 12,
+                    right,
                     zIndex: 1002,
-                    width: 36,
-                    height: 36,
+                    width: 44,
+                    height: 44,
+                    padding: 0,
+                    touchAction: 'manipulation',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -88,12 +97,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </button>
             <div
                 ref={panelRef}
+                className="noteboard-settings-panel"
+                role="region"
+                aria-label="Board settings"
+                onKeyDown={event=>{if(event.key==='Escape'){event.stopPropagation();setOpen(false);buttonRef.current?.focus();}}}
                 style={{
                     position: 'absolute',
                     top: 0,
                     right: 0,
                     bottom: 0,
                     width: 240,
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
                     zIndex: 1003,
                     background: theme.panelBg,
                     borderLeft: theme.panelBorder,
@@ -107,8 +123,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     pointerEvents: open ? 'auto' : 'none',
                     visibility: open ? 'visible' : 'hidden',
                     fontFamily: "'Inter', system-ui, sans-serif",
-                }}
+                    color: theme.panelTextColor,
+                    '--nb-settings-bg': theme.toolbarBg,
+                    '--nb-settings-text': theme.panelTextColor,
+                    '--nb-settings-border': theme.panelMutedColor,
+                } as React.CSSProperties}
             >
+                <style>{`
+.noteboard-settings-panel :is(button,input,textarea,select) { box-sizing:border-box;max-width:100%;min-width:0;font:inherit;color:var(--nb-settings-text);background-color:var(--nb-settings-bg);border:1px solid var(--nb-settings-border);border-radius:5px; }
+.noteboard-settings-panel :is(button,select,input:not([type=checkbox])) { min-height:44px; }
+.noteboard-settings-panel button { min-width:44px;touch-action:manipulation; }
+.noteboard-settings-panel label { display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-height:44px;min-width:0;overflow-wrap:anywhere; }
+.noteboard-settings-panel input[type=checkbox] { width:20px;height:20px;flex-shrink:0; }
+                `}</style>
                 <div
                     style={{
                         display: 'flex',
@@ -116,6 +143,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         justifyContent: 'space-between',
                         padding: '14px 16px 10px',
                         borderBottom: theme.panelBorder,
+                        flexShrink: 0,
                     }}
                 >
                     <span
@@ -130,14 +158,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         Menu
                     </span>
                     <button type="button"
-                        onClick={() => setOpen(false)}
-                        title="Close"
+                        onClick={() => { setOpen(false); buttonRef.current?.focus(); }}
+                        title="Close" aria-label="Close settings"
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: 28,
-                            height: 28,
+                            width: 44,
+                            height: 44,
+                            flexShrink: 0,
                             border: 'none',
                             borderRadius: 6,
                             cursor: 'pointer',
@@ -155,7 +184,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         <X size={16} weight="bold" />
                     </button>
                 </div>
-                <div style={{ padding: '16px', flex: 1, overflowY: 'auto' }}>
+                <div style={{ padding: '16px', flex: 1, minHeight: 0, minWidth: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
                     {children}
                     {/* ── View Options ── */}
                     <div
@@ -206,7 +235,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                         onClick={() => onThemeChange(mode)}
                                         aria-pressed={themeMode === mode}
                                         style={{
-                                            minHeight: 28,
+                                            minHeight: 44,
                                             padding: '0 6px',
                                             border: 'none',
                                             borderRadius: 6,
@@ -234,13 +263,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             <button type="button"
                                 onClick={onToggleGrid}
                                 role="switch"
+                                aria-label="Show grid"
                                 aria-checked={showGrid}
                                 style={{
-                                    position: 'relative', width: 40, height: 22, borderRadius: 11, border: 'none',
-                                    cursor: 'pointer', background: showGrid ? (theme.primaryColor ?? theme.buttonActiveColor) : '#ccc', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                                    position: 'relative', width: 44, height: 44, borderRadius: 8, border: 'none',
+                                    cursor: 'pointer', background: 'transparent', padding: 0, flexShrink: 0,
                                 }}
                             >
-                                <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                                <span style={{ position: 'absolute', top: 11, left: 2, width: 40, height: 22, borderRadius: 11, background: showGrid ? (theme.primaryColor ?? theme.buttonActiveColor) : '#ccc', transition: 'background 0.2s' }}>
+                                    <span style={{ position: 'absolute', top: 2, left: showGrid ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                                </span>
                             </button>
                         </div>
                         {onShowShortcuts && (
@@ -253,6 +285,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                                 </div>
                                 <button type="button"
                                     onClick={() => { onShowShortcuts(); }}
+                                    aria-label="Keyboard shortcuts"
                                     style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         padding: '3px 10px', border: 'none', borderRadius: 7, cursor: 'pointer',

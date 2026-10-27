@@ -1,12 +1,19 @@
-import { useEffect } from 'react';
-import { useNoteboardTheme } from '../ThemeContext';
-
-interface ShortcutModalProps {
-    open: boolean;
-    onClose: () => void;
-}
-
+import {WorkspaceDialog} from './WorkspaceDialog';
+interface ShortcutModalProps {open:boolean;onClose:()=>void;}
 const SECTIONS = [
+    { title:'Keyboard Canvas', shortcuts:[
+        {keys:['Ctrl/⌘','⇧','Backquote'],desc:'Toggle Keyboard Canvas (or use Settings)'},
+        {keys:['Arrows'],desc:'Move cursor 10 px; Shift: 1 px; Alt: 80 px, stopping at objects'},
+        {keys:['Space'],desc:'Start / finish drawing; same point creates nothing'},
+        {keys:['Tab / ⇧ Tab'],desc:'Cycle visible objects; A toggles additive selection'},
+        {keys:['Enter'],desc:'Edit text; Ctrl/⌘ Enter finishes text'},
+        {keys:['M / ⇧ S'],desc:'Move / resize selection with arrows; Enter finishes'},
+        {keys:['P / L'],desc:'Properties / layers; Escape returns to canvas'},
+        {keys:['Ctrl/⌘','K'],desc:'Search tools and actions'},
+        {keys:['Ctrl/⌘','Alt','Arrows'],desc:'Create a connected shape'},
+        {keys:['F / ⇧ F'],desc:'Fit board / selection'},
+        {keys:['Esc / F6'],desc:'Cancel draft / leave mode; Tab then reaches controls'},
+    ]},
     {
         title: 'Navigation',
         shortcuts: [
@@ -63,101 +70,5 @@ const SECTIONS = [
     },
 ];
 
-export function ShortcutModal({ open, onClose }: ShortcutModalProps) {
-    const theme = useNoteboardTheme();
 
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [open, onClose]);
-
-    if (!open) return null;
-
-    return (
-        <div
-            style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 2000,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(0,0,0,0.45)',
-                backdropFilter: 'blur(2px)',
-            }}
-            onPointerDown={onClose}
-        >
-            <div
-                style={{
-                    background: theme.panelBg,
-                    border: theme.panelBorder,
-                    borderRadius: 16,
-                    boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
-                    padding: '24px 28px',
-                    maxWidth: 560,
-                    width: '90%',
-                    maxHeight: '80%',
-                    overflowY: 'auto',
-                    fontFamily: "'Inter', system-ui, sans-serif",
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: theme.panelTextColor }}>
-                        ⌨️ Keyboard Shortcuts
-                    </span>
-                    <button type="button"
-                        onClick={onClose}
-                        style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 18, color: theme.panelMutedColor, lineHeight: 1,
-                            padding: '2px 6px', borderRadius: 6,
-                        }}
-                    >
-                        ×
-                    </button>
-                </div>
-
-                {/* Sections */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 28px' }}>
-                    {SECTIONS.map((section) => (
-                        <div key={section.title}>
-                            <div style={{
-                                fontSize: 10, fontWeight: 700, color: theme.panelMutedColor,
-                                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
-                            }}>
-                                {section.title}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                {section.shortcuts.map((s) => (
-                                    <div key={s.desc} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                        <span style={{ fontSize: 12, color: theme.panelTextColor }}>{s.desc}</span>
-                                        <span style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-                                            {s.keys.map((k) => (
-                                                <kbd key={k} style={{
-                                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                    padding: '1px 6px', borderRadius: 4, fontSize: 11, fontFamily: 'inherit',
-                                                    background: theme.buttonHoverBg, color: theme.panelTextColor,
-                                                    border: theme.panelBorder, minWidth: 22,
-                                                }}>
-                                                    {k}
-                                                </kbd>
-                                            ))}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div style={{ marginTop: 20, paddingTop: 16, borderTop: theme.panelBorder, fontSize: 11, color: theme.panelMutedColor, textAlign: 'center' }}>
-                    Press <kbd style={{ padding: '1px 5px', borderRadius: 4, background: theme.buttonHoverBg, border: theme.panelBorder, fontSize: 11 }}>?</kbd> or <kbd style={{ padding: '1px 5px', borderRadius: 4, background: theme.buttonHoverBg, border: theme.panelBorder, fontSize: 11 }}>Escape</kbd> to close
-                </div>
-            </div>
-        </div>
-    );
-}
+export function ShortcutModal({open,onClose}:ShortcutModalProps){if(!open)return null;return <WorkspaceDialog title="Keyboard shortcuts" onClose={onClose}><p>Use Command on Mac wherever Ctrl is shown. On touch screens, one finger pans and two fingers zoom. Enable Finger drawing in Settings to draw with one finger; a stylus draws directly.</p>{SECTIONS.map(section=><section key={section.title}><h3>{section.title}</h3><dl>{section.shortcuts.map(row=><div key={row.desc} style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:10}}><dt style={{fontWeight:600}}>{row.keys.join(' + ')}</dt><dd style={{margin:0}}>{row.desc}</dd></div>)}</dl></section>)}</WorkspaceDialog>;}

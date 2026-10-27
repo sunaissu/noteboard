@@ -1,6 +1,8 @@
 export { moveKeyboardCursor, nextKeyboardElement } from './keyboardGeometry';
 export { createConnectedSibling, frameSelection, moveFrameChildren } from './editingActions';
 export { Noteboard } from './Noteboard';
+export { getNoteboardScrollbarStyle, getNoteboardScrollbarProps } from './scrollbar';
+export type { NoteboardScrollbarOptions } from './scrollbar';
 export { Toolbar } from './components/Toolbar';
 export { SettingsPanel } from './components/SettingsPanel';
 export { PropertiesPanel } from './components/PropertiesPanel';

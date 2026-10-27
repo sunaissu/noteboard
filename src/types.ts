@@ -5,7 +5,7 @@ import type { NoteboardBrandColors, NoteboardTheme, NoteboardThemeMode } from '.
 import type { NoteboardElement } from './elements/types';
 import type { NoteboardSession, NoteboardViewport } from './session';
 
-export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'text' | 'arrow' | 'eraser' | 'pen' | 'image' | 'star' | 'sticky-note' | 'callout';
+export type Tool = 'select' | 'pan' | 'line' | 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'text' | 'arrow' | 'eraser' | 'pen' | 'image' | 'star' | 'sticky-note' | 'callout' | 'frame';
 
 export type ShapeVariant = 'rectangle' | 'ellipse' | 'diamond' | 'triangle' | 'star';
 
@@ -32,6 +32,8 @@ export interface ToolbarConfig {
 }
 
 export interface NoteboardRef {
+    /** Select and focus a visible object. Returns false for a stale/deleted/hidden ID. */
+    navigateToObject(id:string):boolean;
     /** Returns the live elements array at the time of the call */
     getElements(): NoteboardElement[];
     /** Read navigation without cloning board elements. */
@@ -62,6 +64,17 @@ export interface NoteboardRef {
 }
 
 export interface NoteboardProps {
+    textDraftStorage?: import('./textDrafts').TextDraftStorage;
+    workspace?: import('./boardWorkflows').BoardWorkspaceState;
+    onWorkspaceChange?: (state: import('./boardWorkflows').BoardWorkspaceState) => void;
+    workspaceStorage?: import('./boardWorkflows').BoardWorkspaceStorage;
+    contentAdapter?: import('./boardMetadata').BoardContentAdapter;
+    awareness?: import('./collaborationWorkflows').BoardAwarenessAdapter;
+    comments?: import('./collaborationWorkflows').BoardCommentsAdapter;
+    workshop?: import('./collaborationWorkflows').BoardWorkshopAdapter;
+    versions?: import('./collaborationWorkflows').BoardVersionsAdapter;
+    /** Default false: fingers pan, pens draw. Enable to draw using one finger. */
+    defaultTouchDrawing?: boolean;
     /** Use the Yjs binding history for collaborative local-user undo. */
     history?: HistoryAPI;
     /** Admission limit before an uploaded image is decoded. Default and ceiling: 5 MiB. */
@@ -82,6 +95,8 @@ export interface NoteboardProps {
     themeOverrides?: Partial<NoteboardTheme>;
     /** Primary drives active tools/focus; secondary drives badges and supporting accents. */
     brandColors?: NoteboardBrandColors;
+    /** Scrollbar appearance for board panels. Omit for native browser styling. */
+    scrollbar?: import('./scrollbar').NoteboardScrollbarOptions;
     /** Fires when a theme mode is selected in the board settings. */
     onThemeChange?: (theme: NoteboardThemeMode) => void;
 

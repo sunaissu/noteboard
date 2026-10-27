@@ -12,6 +12,8 @@
  *
  * Pure logic (handle geometry, z-order, grouping) lives in ./canvasUtils.ts.
  */
+import { moveFrameChildren, populateNewFrames, expandFrameSelection } from '../editingActions';
+import { refreshTextGeometry } from '../textGeometry';
 import { useRef, useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { NoteboardElement, Point, Bounds, TextElement, RectangleElement } from '../elements/types';
@@ -60,8 +62,10 @@ const normalizeViewport = (viewport?: NoteboardViewport): NoteboardViewport => (
 });
 
 interface UseCanvasDrawingOptions {
+    sanitizeElements?:(elements:NoteboardElement[])=>NoteboardElement[];
     history?: HistoryAPI;
     activeTool: Tool;
+    toolDefaults?: Partial<NoteboardElement>;
     width: number;
     height: number;
     canvasBg?: string;
@@ -109,17 +113,18 @@ export interface TextEditState {
 }
 
 export function useCanvasDrawing({
-    activeTool, width, height, canvasBg, strokeColor,
+    activeTool, width, height, canvasBg, strokeColor, toolDefaults = {},
     primaryColor = SELECTION_COLOR, primaryOverlay = MARQUEE_FILL, isDark, readOnly = false,
     keyboardEnabled = true, history: externalHistory,
-    initialElements, initialViewport, externalElements, externalViewport, onElementsChange, acceptElementsChange,
+    initialElements, initialViewport, externalElements, externalViewport, onElementsChange, acceptElementsChange, sanitizeElements,
     onViewportChange,
     snapEnabled = false, showGrid = false, onImageInsertRequest, onImagePaste,
 }: UseCanvasDrawingOptions) {
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const sanitizeRef=useRef(sanitizeElements);sanitizeRef.current=sanitizeElements;
     const [elements, setElementsRaw] = useState<NoteboardElement[]>(
-        () => updateBoundElements(externalElements ?? initialElements ?? []),
+        () => updateBoundElements(sanitizeElements?.(externalElements ?? initialElements ?? [])??externalElements??initialElements??[]),
     );
     const readOnlyRef = useRef(readOnly);
     readOnlyRef.current = readOnly;
@@ -136,13 +141,14 @@ export function useCanvasDrawing({
     // Controlled / external elements sync (WebSocket, etc.)
     const externalElementsRef = useRef(externalElements);
     useEffect(() => {
-        if (externalElements && externalElements !== externalElementsRef.current) {
+        if ((externalElements && externalElements !== externalElementsRef.current)||sanitizeElements) {
             externalElementsRef.current = externalElements;
-            const next = updateBoundElements(externalElements);
+            const input=externalElements??elementsRef.current;
+            const next = updateBoundElements(sanitizeElements?.(input)??input);
             elementsRef.current = next;
             setElementsRaw(next);
         }
-    }, [externalElements]);
+    }, [externalElements,sanitizeElements]);
 
     const onImagePasteRef = useRef(onImagePaste);
     onImagePasteRef.current = onImagePaste;
@@ -157,14 +163,16 @@ export function useCanvasDrawing({
     const setElements = useCallback(
         (updater: NoteboardElement[] | ((prev: NoteboardElement[]) => NoteboardElement[]), base?: NoteboardElement[]) => {
             const previous = elementsRef.current;
-            const candidate = typeof updater === 'function' ? updater(previous) : updater;
-            const next = updateBoundElements(candidate);
-            if (next === previous) return;
-            if (acceptElementsChangeRef.current?.(next, previous) === false) return;
+            const raw = typeof updater === 'function' ? updater(previous) : updater;
+            const candidate = sanitizeRef.current?.(raw)??raw;
+            const next = updateBoundElements(moveFrameChildren(previous, refreshTextGeometry(previous,candidate)));
+            if (next === previous) return true;
+            if (acceptElementsChangeRef.current?.(next, previous) === false) return false;
 
             elementsRef.current = next;
             setElementsRaw(next);
             onElementsChangeRef.current?.(next, base ?? previous);
+            return true;
         },
         [],
     );
@@ -252,6 +260,7 @@ export function useCanvasDrawing({
     // Set to true by the canvas React onPointerUp; the global window fallback
     // checks this to avoid double-processing the same event.
     const pointerUpHandledRef = useRef(false);
+    const activePointerIdRef = useRef<number | null>(null);
 
     // History and clipboard
     const localHistory = useHistory();
@@ -305,8 +314,8 @@ export function useCanvasDrawing({
     const snapRef = useRef<ConnectorSnapResult | null>(null);
 
     const findSnapTarget = useCallback((point: Point, excludeId?: string) => (
-        findBinding(point, elementsRef.current, CONNECTOR_SNAP_DISTANCE / zoom, excludeId)
-    ), [zoom]);
+        findBinding(point, elementsRef.current, CONNECTOR_SNAP_DISTANCE / zoom, excludeId, activeTool === 'line' ? 'line' : 'arrow')
+    ), [zoom,activeTool]);
 
     const updateLinearDraftEndpoint = useCallback((point: Point) => {
         const element = currentElementRef.current;
@@ -377,20 +386,19 @@ export function useCanvasDrawing({
 
         // Draw all elements — skip standalone text being edited in textarea overlay
         for (const el of allElements) {
-            if (!el || el.isDeleted) continue;
+            if (!el || el.isDeleted || el.hidden) continue;
             const excludeText = textEdit.active && textEdit.editingId === el.id;
             if (excludeText && el.type === 'text') continue;
             renderElement(ctx, el, excludeText, queueImageRepaint);
         }
 
-        // ── Selection overlay ──
         const editableSelectionIds = new Set(
             allElements
-                .filter((element) => element && selectedIds.has(element.id) && !element.isDeleted && !isLockedElement(element))
+                .filter((element) => element && selectedIds.has(element.id) && !element.isDeleted && !element.hidden && !isLockedElement(element))
                 .map((element) => element.id),
         );
         if (editableSelectionIds.size > 0) {
-            const selectedEls = allElements.filter((e) => e && editableSelectionIds.has(e.id) && !e.isDeleted);
+            const selectedEls = allElements.filter((e) => e && editableSelectionIds.has(e.id) && !e.isDeleted && !e.hidden);
             const singleEl = selectedEls.length === 1 ? selectedEls[0] : null;
 
             ctx.save();
@@ -427,7 +435,6 @@ export function useCanvasDrawing({
             }
             ctx.restore();
 
-            // ── Draw handles ──
             const isTextOnly = singleEl && singleEl.type === 'text';
             const isLineOrArrow = singleEl && (singleEl.type === 'line' || singleEl.type === 'arrow');
             const isMulti = selectedEls.length > 1;
@@ -502,7 +509,6 @@ export function useCanvasDrawing({
             }
         }
 
-        // ── Selection marquee ──
         const sr = selectionRectRef.current;
         if (sr) {
             ctx.save();
@@ -514,7 +520,6 @@ export function useCanvasDrawing({
             ctx.restore();
         }
 
-        // ── Connector snap highlight ──
         const snap = snapRef.current;
         if (snap) {
             ctx.save();
@@ -598,7 +603,7 @@ export function useCanvasDrawing({
 
         setElements((prev) => {
             history.record(prev);
-            return [...prev, finishedElement];
+            return populateNewFrames(prev,[...prev, finishedElement]);
         });
     }, [cancelCurrentDrawing, history, repaint, setElements, zoom]);
 
@@ -642,14 +647,14 @@ export function useCanvasDrawing({
     useEffect(() => {
         if (!keyboardEnabled) return;
         const onKeyDown = (e: KeyboardEvent) => {
-            if (textEdit.active) return;
+            if (textEdit.active || e.defaultPrevented || e.isComposing || (e.target as HTMLElement)?.closest('select,button,[contenteditable="true"],[role="dialog"]')) return;
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
             const isCtrl = e.ctrlKey || e.metaKey;
             if (readOnlyRef.current && isElementMutationShortcut(e)) return;
             const editableSelectedIds = new Set(
                 elements
-                    .filter((el) => selectedIds.has(el.id) && !isLockedElement(el))
+                    .filter((el) => selectedIds.has(el.id) && !el.isDeleted && !el.hidden && !isLockedElement(el))
                     .map((el) => el.id),
             );
 
@@ -659,19 +664,20 @@ export function useCanvasDrawing({
                 setSelectedIds(new Set());
                 return;
             }
-            if (isCtrl && e.key === 'z' && !e.shiftKey) {
+            if (isCtrl && e.key.toLowerCase() === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 setElements((prev) => { const r = history.undo(prev); if (r) { setSelectedIds(new Set()); return r; } return prev; });
                 return;
             }
-            if ((isCtrl && e.key === 'z' && e.shiftKey) || (isCtrl && e.key === 'y')) {
+            if ((isCtrl && e.key.toLowerCase() === 'z' && e.shiftKey) || (isCtrl && e.key === 'y')) {
                 e.preventDefault();
                 setElements((prev) => { const r = history.redo(prev); if (r) { setSelectedIds(new Set()); return r; } return prev; });
                 return;
             }
             if (isCtrl && e.key === 'c' && editableSelectedIds.size > 0) {
                 e.preventDefault();
-                clipboardRef.current = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted);
+                const ids=expandFrameSelection(elements,editableSelectedIds);
+                clipboardRef.current = elements.filter((el) => ids.has(el.id) && !el.locked && !el.isDeleted && !el.hidden);
                 return;
             }
             if (isCtrl && e.key === 'v' && clipboardRef.current.length > 0) {
@@ -684,8 +690,9 @@ export function useCanvasDrawing({
             }
             if (isCtrl && e.key === 'd' && editableSelectedIds.size > 0) {
                 e.preventDefault();
+                const copyIds=expandFrameSelection(elements,editableSelectedIds);
                 const duplicated = duplicateElements(
-                    elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted),
+                    elements.filter((el) => copyIds.has(el.id) && !el.locked && !el.isDeleted && !el.hidden),
                 );
                 setElements((prev) => { history.record(prev); return [...prev, ...duplicated]; });
                 setSelectedIds(new Set(duplicated.map((el) => el.id)));
@@ -693,7 +700,7 @@ export function useCanvasDrawing({
             }
             if (isCtrl && e.key === 'a') {
                 e.preventDefault();
-                setSelectedIds(new Set(elements.filter((el) => !el.isDeleted && !isLockedElement(el)).map((el) => el.id)));
+                setSelectedIds(new Set(elements.filter((el) => !el.isDeleted && !el.hidden && !isLockedElement(el)).map((el) => el.id)));
                 return;
             }
             if (e.key === ']' && editableSelectedIds.size > 0) {
@@ -732,7 +739,7 @@ export function useCanvasDrawing({
             }
             if (isCtrl && e.key === '0') {
                 e.preventDefault();
-                const active = elementsRef.current.filter((el) => !el.isDeleted);
+                const active = elementsRef.current.filter((el) => !el.isDeleted && !el.hidden);
                 if (active.length === 0) { setZoom(1); setPanOffset({ x: 0, y: 0 }); return; }
                 let bx1 = Infinity, bx2 = -Infinity, by1 = Infinity, by2 = -Infinity;
                 for (const el of active) {
@@ -750,7 +757,7 @@ export function useCanvasDrawing({
             }
             if (isCtrl && e.shiftKey && (e.key === 'H' || e.key === 'F') && selectedIds.size > 0) {
                 e.preventDefault();
-                const sel = elementsRef.current.filter((el) => selectedIds.has(el.id) && !el.isDeleted);
+                const sel = elementsRef.current.filter((el) => selectedIds.has(el.id) && !el.isDeleted && !el.hidden);
                 if (sel.length === 0) return;
                 let bx1 = Infinity, bx2 = -Infinity, by1 = Infinity, by2 = -Infinity;
                 for (const el of sel) {
@@ -801,6 +808,7 @@ export function useCanvasDrawing({
                 return;
             }
             canvas.setPointerCapture(e.pointerId);
+            activePointerIdRef.current = typeof e.pointerId === 'number' ? e.pointerId : null;
             const cp = toCanvas(e.clientX, e.clientY);
             const sp = toScreen(e.clientX, e.clientY);
 
@@ -814,14 +822,13 @@ export function useCanvasDrawing({
             }
             const editableSelectedIds = new Set(
                 elements
-                    .filter((el) => selectedIds.has(el.id) && !isLockedElement(el))
+                    .filter((el) => selectedIds.has(el.id) && !el.isDeleted && !el.hidden && !isLockedElement(el))
                     .map((el) => el.id),
             );
 
-            // ── SELECT ──
             if (activeTool === 'select') {
                 if (editableSelectedIds.size > 0) {
-                    const selectedEls = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted);
+                    const selectedEls = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted && !el.hidden);
                     const singleEl = selectedEls.length === 1 ? selectedEls[0] : null;
                     const isLineOrArrow = singleEl && (singleEl.type === 'line' || singleEl.type === 'arrow');
 
@@ -871,13 +878,13 @@ export function useCanvasDrawing({
                                     if (el) angles.set(id, el.angle);
                                 }
                                 rotationStartElementAnglesRef.current = angles;
-                                resizeStartElementsRef.current = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted);
+                                resizeStartElementsRef.current = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted && !el.hidden);
                             } else {
                                 history.record(elements);
                                 interactionModeRef.current = 'resize';
                                 activeHandleRef.current = handle;
                                 resizeStartBoundsRef.current = selBounds!;
-                                resizeStartElementsRef.current = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted);
+                                resizeStartElementsRef.current = elements.filter((el) => editableSelectedIds.has(el.id) && !el.isDeleted && !el.hidden);
                             }
                             return;
                         }
@@ -888,7 +895,7 @@ export function useCanvasDrawing({
                 if (selectedIds.size > 0) {
                     for (let i = elements.length - 1; i >= 0; i--) {
                         const el = elements[i];
-                        if (el.isDeleted || isLockedElement(el)) continue;
+                        if (el.isDeleted || el.hidden || isLockedElement(el)) continue;
                         if (selectedIds.has(el.id) && hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                             history.record(elements);
                             isDraggingRef.current = true;
@@ -901,7 +908,7 @@ export function useCanvasDrawing({
                 // Click new element → select it
                 for (let i = elements.length - 1; i >= 0; i--) {
                     const el = elements[i];
-                    if (el.isDeleted || isLockedElement(el)) continue;
+                    if (el.isDeleted || el.hidden || isLockedElement(el)) continue;
                     if (hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                         if (e.shiftKey) {
                             setSelectedIds((prev) => {
@@ -927,7 +934,6 @@ export function useCanvasDrawing({
                 return;
             }
 
-            // ── PAN ──
             if (activeTool === 'pan') {
                 isPanningRef.current = true;
                 panStartRef.current = sp;
@@ -935,13 +941,12 @@ export function useCanvasDrawing({
                 return;
             }
 
-            // ── ERASER ──
             if (activeTool === 'eraser') {
                 isErasingRef.current = true;
                 eraserHistoryRecordedRef.current = false;
                 for (let i = elements.length - 1; i >= 0; i--) {
                     const el = elements[i];
-                    if (el.isDeleted || isLockedElement(el)) continue;
+                    if (el.isDeleted || el.hidden || isLockedElement(el)) continue;
                     if (hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                         history.record(elements);
                         eraserHistoryRecordedRef.current = true;
@@ -953,11 +958,10 @@ export function useCanvasDrawing({
                 return;
             }
 
-            // ── TEXT ──
             if (activeTool === 'text') {
                 for (let i = elements.length - 1; i >= 0; i--) {
                     const el = elements[i];
-                    if (el.isDeleted || isLockedElement(el) || el.type !== 'text') continue;
+                    if (el.isDeleted || el.hidden || isLockedElement(el) || el.type !== 'text') continue;
                     if (hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                         setSelectedIds(new Set());
                         setTextEdit({ x: el.x, y: el.y, active: true, editingId: el.id, initialText: isTextElement(el) ? el.text : '' });
@@ -969,14 +973,12 @@ export function useCanvasDrawing({
                 return;
             }
 
-            // ── IMAGE ──
             if (activeTool === 'image') {
                 const cp = toCanvas(e.clientX, e.clientY);
                 onImageInsertRequest?.(cp.x, cp.y);
                 return;
             }
 
-            // ── DRAWING TOOLS ──
             if (!isDrawingTool(activeTool)) return;
 
             if ((activeTool === 'line' || activeTool === 'arrow') && pendingLinearRef.current) {
@@ -1026,10 +1028,10 @@ export function useCanvasDrawing({
                     x: cp.x, y: cp.y, width: 0, height: 0, ...(strokeColor ? { strokeColor } : {}),
                 } as any);
             }
-            currentElementRef.current = el;
+            currentElementRef.current = { ...el, ...toolDefaults, id: el.id, type: el.type, x: el.x, y: el.y } as NoteboardElement;
             setSelectedIds(new Set());
         },
-        [activeTool, cancelCurrentDrawing, elements, findSnapTarget, panOffset, repaint, selectedIds, snapEnabled, strokeColor, updateLinearDraftEndpoint, zoom, toCanvas, toScreen],
+        [activeTool, toolDefaults, cancelCurrentDrawing, elements, findSnapTarget, panOffset, repaint, selectedIds, snapEnabled, strokeColor, updateLinearDraftEndpoint, zoom, toCanvas, toScreen],
     );
 
     const onPointerMove = useCallback(
@@ -1051,7 +1053,7 @@ export function useCanvasDrawing({
             ) {
                 const cp = toCanvas(e.clientX, e.clientY);
                 const selectedEls = elementsRef.current.filter((el) => (
-                    selectedIds.has(el.id) && !el.isDeleted && !isLockedElement(el)
+                    selectedIds.has(el.id) && !el.isDeleted && !el.hidden && !isLockedElement(el)
                 ));
                 const editableSelectedIds = new Set(selectedEls.map((el) => el.id));
                 const singleEl = selectedEls.length === 1 ? selectedEls[0] : null;
@@ -1111,7 +1113,7 @@ export function useCanvasDrawing({
                 let hoverCursor = 'default';
                 for (let i = elementsRef.current.length - 1; i >= 0; i--) {
                     const el = elementsRef.current[i];
-                    if (el.isDeleted || isLockedElement(el)) continue;
+                    if (el.isDeleted || el.hidden || isLockedElement(el)) continue;
                     if (hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                         hoverCursor = el.type === 'text' ? 'text' : 'move';
                         break;
@@ -1139,7 +1141,7 @@ export function useCanvasDrawing({
             if (isErasingRef.current) {
                 const cp = toCanvas(e.clientX, e.clientY);
                 const willErase = elementsRef.current.some((element) => (
-                    !element.isDeleted
+                    !element.isDeleted && !element.hidden
                     && !isLockedElement(element)
                     && hitTestElement(cp, element, HIT_TEST_THRESHOLD)
                 ));
@@ -1149,7 +1151,7 @@ export function useCanvasDrawing({
                 }
                 if (!willErase) return;
                 setElements((prev) => prev.map((el) => (
-                    !el.isDeleted
+                    !el.isDeleted && !el.hidden
                     && !isLockedElement(el)
                     && hitTestElement(cp, el, HIT_TEST_THRESHOLD)
                 ) ? { ...el, isDeleted: true } : el));
@@ -1311,7 +1313,7 @@ export function useCanvasDrawing({
                 const dx = cp.x - dragLastRef.current.x, dy = cp.y - dragLastRef.current.y;
                 dragLastRef.current = cp;
                 setElements((prev) => prev.map((el) => (
-                    selectedIds.has(el.id) && !isLockedElement(el)
+                    selectedIds.has(el.id) && !el.isDeleted && !el.hidden && !isLockedElement(el)
                         ? { ...el, x: el.x + dx, y: el.y + dy }
                         : el
                 )));
@@ -1341,7 +1343,7 @@ export function useCanvasDrawing({
             const el = currentElementRef.current;
 
             if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'diamond' || el.type === 'triangle'
-                || el.type === 'star' || el.type === 'sticky-note' || el.type === 'callout') {
+                || el.type === 'star' || el.type === 'sticky-note' || el.type === 'callout' || el.type === 'frame') {
                 const rawCp = snapEnabled ? snapToGrid(cp) : cp;
                 currentElementRef.current = { ...el, width: rawCp.x - start.x, height: rawCp.y - start.y };
             } else if (el.type === 'line' || el.type === 'arrow') {
@@ -1410,7 +1412,8 @@ export function useCanvasDrawing({
     // within-canvas interactions the canvas handler sets pointerUpHandledRef=true
     // and this listener is skipped, so it cannot interfere with dragging.
     useEffect(() => {
-        const onWindowPointerUp = () => {
+        const onWindowPointerUp = (event: PointerEvent) => {
+            if (activePointerIdRef.current !== null && event.pointerId !== activePointerIdRef.current) return;
             // Canvas already handled this event — skip
             if (pointerUpHandledRef.current) {
                 pointerUpHandledRef.current = false;
@@ -1508,7 +1511,7 @@ export function useCanvasDrawing({
         const editingEl = textEdit.editingId
             ? elementsRef.current.find((element) => element.id === textEdit.editingId) ?? null
             : null;
-        if (textEdit.editingId && (!editingEl || editingEl.isDeleted || isLockedElement(editingEl))) {
+        if (textEdit.editingId && (!editingEl || editingEl.isDeleted || editingEl.hidden || isLockedElement(editingEl))) {
             setRecoveredText(text);
             setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
             return;
@@ -1544,16 +1547,17 @@ export function useCanvasDrawing({
             fontSize = (editingEl as TextElement).fontSize;
             fontFamily = (editingEl as TextElement).fontFamily;
         } else {
-            fontSize = DEFAULT_FONT_SIZE; fontFamily = DEFAULT_FONT_FAMILY;
+            fontSize = (toolDefaults as TextElement).fontSize ?? DEFAULT_FONT_SIZE; fontFamily = (toolDefaults as TextElement).fontFamily ?? DEFAULT_FONT_FAMILY;
         }
 
-        const lineHeight = fontSize * ((editingEl as TextElement | null)?.lineHeight ?? DEFAULT_LINE_HEIGHT);
+        const textStyle=(editingEl??toolDefaults) as Partial<TextElement>;
+        const lineHeight = fontSize * (textStyle.lineHeight ?? DEFAULT_LINE_HEIGHT);
         const lines = trimmed.split('\n');
         let maxWidth = 0;
         const canvas = canvasRef.current;
         if (canvas) {
             const ctx = canvas.getContext('2d');
-            if (ctx) { ctx.font = `${(editingEl as TextElement | null)?.fontStyle ?? "normal"} ${(editingEl as TextElement | null)?.fontWeight ?? "normal"} ${fontSize}px ${fontFamily}`; for (const line of lines) { const m = ctx.measureText(line); if (m.width > maxWidth) maxWidth = m.width; } }
+            if (ctx) { ctx.font = `${textStyle.fontStyle ?? "normal"} ${textStyle.fontWeight ?? "normal"} ${fontSize}px ${fontFamily}`; for (const line of lines) { const m = ctx.measureText(line); if (m.width > maxWidth) maxWidth = m.width; } }
         }
         if (maxWidth === 0) maxWidth = text.length * 10;
         const measuredHeight = Math.max(lineHeight, lines.length * lineHeight);
@@ -1561,19 +1565,19 @@ export function useCanvasDrawing({
         if (textEdit.editingId) {
             updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return prev.map((e) => e.id === textEdit.editingId ? { ...e, text: trimmed, width: maxWidth, height: measuredHeight } as any : e); });
         } else {
-            const el = createElement('text', { x: textEdit.x, y: textEdit.y, text: trimmed, fontSize, fontFamily, width: maxWidth, height: measuredHeight, ...(strokeColor ? { strokeColor } : {}) } as any);
+            const el = createElement('text', { ...(strokeColor ? { strokeColor } : {}), ...toolDefaults, x: textEdit.x, y: textEdit.y, text: trimmed, fontSize, fontFamily, width: maxWidth, height: measuredHeight } as any);
             updateTextElements((prev) => { if (!textHistoryRecorded.current) { history.record(prev); textHistoryRecorded.current = true; } return [...prev, el]; });
             if (!finish) setTextEdit({ ...textEdit, editingId: el.id });
         }
         if (finish) setTextEdit({ x: 0, y: 0, active: false, editingId: null, initialText: '' });
-    }, [textEdit, history]);
+    }, [textEdit, history, toolDefaults, strokeColor]);
 
     const onDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
         if ((activeTool !== 'select' && activeTool !== 'text') || drawingRef.current || pendingLinearRef.current) return;
         const cp = toCanvas(e.clientX, e.clientY);
         for (let i = elements.length - 1; i >= 0; i--) {
             const el = elements[i];
-            if (el.isDeleted || isLockedElement(el)) continue;
+            if (el.isDeleted || el.hidden || isLockedElement(el)) continue;
             if (el.type === 'text' && hitTestElement(cp, el, HIT_TEST_THRESHOLD)) {
                 setSelectedIds(new Set());
                 setTextEdit({ x: el.x, y: el.y, active: true, editingId: el.id, initialText: isTextElement(el) ? el.text : '' });
@@ -1603,7 +1607,7 @@ export function useCanvasDrawing({
     }, []);
 
     const fitAll = useCallback(() => {
-        const active = elementsRef.current.filter((el) => !el.isDeleted);
+        const active = elementsRef.current.filter((el) => !el.isDeleted && !el.hidden);
         if (active.length === 0) { setZoom(1); setPanOffset({ x: 0, y: 0 }); return; }
         let bx1 = Infinity, bx2 = -Infinity, by1 = Infinity, by2 = -Infinity;
         for (const el of active) {
@@ -1631,9 +1635,9 @@ export function useCanvasDrawing({
     }, [activeTool, repaint]);
 
     return {
-        canvasRef, elements, setElements,
+        canvasRef, elements, setElements, getCurrentElements: () => elementsRef.current,
         selectedIds, setSelectedIds,
-        textEdit, commitText, recoveredText, clearRecoveredText: () => setRecoveredText(null),
+        textEdit, setTextEdit, cancelPointerInteraction, commitText, recoveredText, clearRecoveredText: () => setRecoveredText(null),
         panOffset, setPanOffset, zoom, setZoom,
         history,
         zoomIn, zoomOut, zoomReset, fitAll,
