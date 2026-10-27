@@ -50,7 +50,8 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
-    "THIRD_PARTY_NOTICES.txt"
+    "THIRD_PARTY_NOTICES.txt",
+    "assets/brand"
   ],
   "scripts": {
     "build": "tsup ./src/index.tsx ./src/yjs.ts --format cjs,esm --dts --clean",

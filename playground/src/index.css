@@ -96,3 +96,8 @@ button { font: inherit; }
   .inspector :is(button,select), .brand-color-grid label { min-height:44px; }
   .inspector :is(input,select) { font-size:16px; }
 }
+
+.maker-credit { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:24px; padding:18px 0; color:#94a3b8; font-size:12px; }
+.maker-credit img { display:block; flex-shrink:0; object-fit:contain; }
+.maker-wordmark { width:81px; height:26px; }
+.maker-monogram { width:26px; height:13px; opacity:.65; }

@@ -1,5 +1,7 @@
 # @sunaissu/noteboard
 
+<p><img src="assets/brand/sunaissu.svg" alt="Sunaissu" width="104"></p>
+
 > A highly customizable, responsive React whiteboard canvas for drawing, diagramming, and real-time collaboration.
 
 [![npm version](https://img.shields.io/npm/v/@sunaissu/noteboard)](https://www.npmjs.com/package/@sunaissu/noteboard)

@@ -1,3 +1,5 @@
+import sunaissuMark from "../../assets/brand/sunaissu-dark.svg";
+import bgMark from "../../assets/brand/bg-dark.svg";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Noteboard, NoteboardPreview, createBoardTemplate, deserializeBoard, duplicateElements, getNoteboardScrollbarProps,
@@ -170,5 +172,6 @@ export default function App() {
     </section>
     <footer className="playground-footer"><span><kbd>?</kbd> Keyboard shortcuts <span aria-hidden="true">·</span> Right-click for object actions</span><span>Drawing with <strong>{activeTool}</strong></span></footer>
     <details className="source-drawer" onToggle={event => setInspectSource(event.currentTarget.open)}><summary>Inspect board objects <span>{live.length} objects</span></summary><pre {...getNoteboardScrollbarProps(scrollbar)} tabIndex={0}>{source}</pre></details>
-  </main></div>;
+  <footer className="maker-credit"><span>Made by</span><img className="maker-wordmark" src={sunaissuMark} alt="Sunaissu" width="81" height="26" /><img className="maker-monogram" src={bgMark} alt="bg_" width="26" height="13" /></footer>
+      </main></div>;
 }
