@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Noteboard, NoteboardPreview, createBoardTemplate, deserializeBoard, duplicateElements,
+  Noteboard, NoteboardPreview, createBoardTemplate, deserializeBoard, duplicateElements, getNoteboardScrollbarProps,
   MAX_BOARD_ELEMENTS, MAX_BOARD_IMPORT_BYTES, getElementBounds,
   type BoardTemplate, type NoteboardElement, type NoteboardRef,
-  type NoteboardThemeMode, type NoteboardViewport, type ToolbarPosition, type Tool,
+  type NoteboardThemeMode, type NoteboardViewport, type ToolbarPosition, type Tool, type NoteboardScrollbarOptions,
 } from '@sunaissu/noteboard';
 
+import { workspaceStorage,textDraftStorage,room,localSession,playgroundVersions,contentAdapter } from './workspaceAdapters';
+
 const positions: ToolbarPosition[] = ['top', 'bottom', 'left', 'right'];
+const colorSchemes = {
+  default: { label: 'Default', primary: '#7c5cff', secondary: '#22a06b' },
+  ocean: { label: 'Ocean', primary: '#2563eb', secondary: '#06b6d4' },
+  forest: { label: 'Forest', primary: '#15803d', secondary: '#ca8a04' },
+  plum: { label: 'Plum', primary: '#9333ea', secondary: '#db2777' },
+};
 function download(url: string, name: string) {
   const link = document.createElement('a'); link.href = url; link.download = name;
   document.body.appendChild(link); link.click(); link.remove();
@@ -20,6 +28,7 @@ function PositionControl({ label, value, onChange }: { label: string; value: Too
 export default function App() {
   const board = useRef<NoteboardRef>(null), importInput = useRef<HTMLInputElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const versions=useMemo(()=>playgroundVersions(()=>board.current?.getElements()??[]),[]);
   const [elements, setElements] = useState<NoteboardElement[]>(() => createBoardTemplate('flowchart'));
   const [viewport, setViewport] = useState<NoteboardViewport>({ panX: 0, panY: 0, zoom: 1 });
   const [activeTool, setActiveTool] = useState<Tool>('select');
@@ -28,12 +37,22 @@ export default function App() {
   const [readOnly, setReadOnly] = useState(false);
   const [theme, setTheme] = useState<NoteboardThemeMode>('system');
   const [primary, setPrimary] = useState('#7c5cff'), [secondary, setSecondary] = useState('#22a06b');
+  const [colorScheme, setColorScheme] = useState<keyof typeof colorSchemes | 'custom'>('default');
+  const [scrollbarPreset, setScrollbarPreset] = useState<'native' | 'custom' | 'hidden'>('native');
+  const [thumbColor, setThumbColor] = useState('#7c5cff'), [trackColor, setTrackColor] = useState('#edf2f7');
+  const [transparentTrack, setTransparentTrack] = useState(true), [thinScrollbar, setThinScrollbar] = useState(false);
+  const scrollbar: NoteboardScrollbarOptions | undefined = scrollbarPreset === 'hidden'
+    ? { width: 'none' }
+    : scrollbarPreset === 'custom'
+      ? { thumbColor, trackColor: transparentTrack ? 'transparent' : trackColor, width: thinScrollbar ? 'thin' : 'auto' }
+      : undefined;
   const [template, setTemplate] = useState<BoardTemplate>('flowchart');
   const [status, setStatus] = useState(''), [exporting, setExporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<{ name: string; elements: NoteboardElement[]; viewport: NoteboardViewport } | null>(null);
   const importGeneration = useRef(0), permission = useRef(readOnly);
   permission.current = readOnly;
   const live = useMemo(() => elements.filter(element => !element.isDeleted), [elements]);
+  useEffect(()=>room.syncElements(elements),[elements]);
   const [inspectSource, setInspectSource] = useState(false);
   const source = useMemo(() => inspectSource ? JSON.stringify(elements, null, 2) : '', [elements, inspectSource]);
   useEffect(() => {
@@ -98,22 +117,38 @@ export default function App() {
     board.current.setElements([...previous, ...added]); fit(added); setStatus('Template inserted. Every object is editable.');
   };
 
-  return <main className="playground-shell">
+  return <div {...getNoteboardScrollbarProps(scrollbar)} className="noteboard-playground-scroll sunaissu-noteboard-scrollbar" role="region" aria-label="Noteboard playground" tabIndex={0}><main className="playground-shell">
     <header className="playground-header"><div>
       <span className="eyebrow">@sunaissu/noteboard</span>
       <h1>Room for your next idea.</h1>
       <p>Sketch a flow, map out a plan, or make space for a new thought. Start with a template and make it yours.</p>
     </div><div className="package-badge"><span />Local package playground</div></header>
     <section className="playground-grid">
-      <div className="board-stage" ref={stage}><Noteboard ref={board} elements={elements} onElementsChange={setElements}
+      <div className="board-stage" ref={stage}><Noteboard ref={board} workspaceStorage={workspaceStorage} textDraftStorage={textDraftStorage} contentAdapter={contentAdapter} versions={versions} awareness={localSession.awareness} comments={localSession.comments} workshop={localSession.workshop} elements={elements} onElementsChange={setElements}
         viewport={viewport} onViewportChange={setViewport} activeTool={activeTool} onToolSelect={setActiveTool}
         toolbarPosition={position} propertiesPosition={propertiesPosition} readOnly={readOnly}
-        theme={theme} onThemeChange={setTheme} brandColors={{ primary, secondary }} boardId="playground" threadId="local" /></div>
-      <aside className="inspector" aria-label="Playground controls">
+        theme={theme} onThemeChange={setTheme} brandColors={{ primary, secondary }} scrollbar={scrollbar} boardId="playground" threadId="local" /></div>
+      <aside {...getNoteboardScrollbarProps(scrollbar)} className="inspector sunaissu-noteboard-scrollbar" aria-label="Playground controls" tabIndex={0}>
         <div className="inspector-heading"><span>Playground controls</span><small>{readOnly ? 'Read-only' : 'Editable'}</small></div>
         <fieldset className="control-group"><legend>Color theme</legend><div className="mode-grid three-columns">
-          {(['system', 'light', 'dark'] as const).map(candidate => <button type="button" key={candidate} aria-pressed={theme === candidate} className={theme === candidate ? 'is-active' : ''} onClick={() => setTheme(candidate)}>{candidate === 'system' ? 'auto' : candidate}</button>)}
-        </div><div className="brand-color-grid"><label>Primary<input type="color" value={primary} onChange={event => setPrimary(event.target.value)} /></label><label>Secondary<input type="color" value={secondary} onChange={event => setSecondary(event.target.value)} /></label></div></fieldset>
+          {(['system', 'light', 'dark'] as const).map(candidate => <button type="button" key={candidate} aria-pressed={theme === candidate} className={theme === candidate ? 'is-active' : ''} onClick={() => setTheme(candidate)}>{candidate}</button>)}
+        </div>
+          <label htmlFor="board-color-scheme">Color scheme</label>
+          <select id="board-color-scheme" value={colorScheme} onChange={event => {
+            const next = event.target.value as typeof colorScheme; setColorScheme(next);
+            if (next !== 'custom') { setPrimary(colorSchemes[next].primary); setSecondary(colorSchemes[next].secondary); }
+          }}>{Object.entries(colorSchemes).map(([value, scheme]) => <option key={value} value={value}>{scheme.label}</option>)}<option value="custom">Custom</option></select>
+          <div className="brand-color-grid"><label>Primary<input type="color" value={primary} onChange={event => { setPrimary(event.target.value); setColorScheme('custom'); }} /></label><label>Secondary<input type="color" value={secondary} onChange={event => { setSecondary(event.target.value); setColorScheme('custom'); }} /></label></div>
+        </fieldset>
+        <fieldset className="control-group"><legend>Scrollbar</legend>
+          <label htmlFor="board-scrollbar-appearance">Appearance</label>
+          <select id="board-scrollbar-appearance" value={scrollbarPreset} onChange={event => setScrollbarPreset(event.target.value as typeof scrollbarPreset)}><option value="native">Native</option><option value="custom">Custom colors</option><option value="hidden">Hidden</option></select>
+          {scrollbarPreset === 'custom' && <>
+            <div className="brand-color-grid"><label>Thumb color<input type="color" value={thumbColor} onChange={event => setThumbColor(event.target.value)} /></label><label>Track color<input type="color" value={trackColor} disabled={transparentTrack} onChange={event => setTrackColor(event.target.value)} /></label></div>
+            <label className="checkbox-control"><input type="checkbox" checked={transparentTrack} onChange={event => setTransparentTrack(event.target.checked)} />Transparent track</label>
+            <label className="checkbox-control"><input type="checkbox" checked={thinScrollbar} onChange={event => setThinScrollbar(event.target.checked)} />Thin scrollbar</label>
+          </>}
+        </fieldset>
         <PositionControl label="Toolbar position" value={position} onChange={setPosition} />
         <PositionControl label="Properties position" value={propertiesPosition} onChange={setPropertiesPosition} />
         <fieldset className="control-group"><legend>Start with a template</legend>
@@ -130,10 +165,10 @@ export default function App() {
         </fieldset>
         {pendingImport && <section className="import-preview" aria-label="Import preview"><strong>{pendingImport.name}</strong><p>{pendingImport.elements.filter(element => !element.isDeleted).length} visible objects</p><NoteboardPreview elements={pendingImport.elements} height={100} /><div className="mode-grid"><button type="button" onClick={() => applyImport(true)}>Merge objects</button><button type="button" onClick={() => applyImport(false)}>Replace board</button></div><button type="button" className="wide-action subtle" onClick={() => { setPendingImport(null); setStatus('Import cancelled'); }}>Cancel import</button></section>}
         <div className="metrics"><div><strong>{live.length}</strong><span>Objects</span></div><div><strong>{Math.round(viewport.zoom * 100)}%</strong><span>Zoom</span></div></div>
-        <p className="playground-status" role="status">{status || 'Your changes stay in this session. Export JSON to keep a copy.'}</p>
+        <p className="playground-status" role="status">{status || 'Export JSON to save a copy. Import JSON to reopen it.'}</p>
       </aside>
     </section>
     <footer className="playground-footer"><span><kbd>?</kbd> Keyboard shortcuts <span aria-hidden="true">·</span> Right-click for object actions</span><span>Drawing with <strong>{activeTool}</strong></span></footer>
-    <details className="source-drawer" onToggle={event => setInspectSource(event.currentTarget.open)}><summary>Inspect board objects <span>{live.length} objects</span></summary><pre>{source}</pre></details>
-  </main>;
+    <details className="source-drawer" onToggle={event => setInspectSource(event.currentTarget.open)}><summary>Inspect board objects <span>{live.length} objects</span></summary><pre {...getNoteboardScrollbarProps(scrollbar)} tabIndex={0}>{source}</pre></details>
+  </main></div>;
 }

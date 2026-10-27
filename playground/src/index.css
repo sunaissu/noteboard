@@ -8,6 +8,8 @@
 * { box-sizing: border-box; }
 body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradient(circle at 15% -10%, rgba(56, 189, 248, 0.13), transparent 28rem), #080a0e; }
 button { font: inherit; }
+.noteboard-playground-scroll { width:100%;height:100dvh;overflow:auto;overscroll-behavior:contain; }
+.noteboard-playground-scroll:focus-visible { outline:2px solid #7dd3fc;outline-offset:-2px; }
 
 .playground-shell { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 2rem; }
 .playground-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: 1rem; }
@@ -70,7 +72,6 @@ button { font: inherit; }
 .import-preview .mode-grid { margin: .5rem 0; }
 @media(max-width: 900px) { .playground-shell { width: min(100% - 1rem, 760px); padding-top: 1rem; } .playground-header { gap: .5rem; } .package-badge { display: none; } .inspector .mode-grid button, .inspector .wide-action { min-height: 40px; } }
 
-/* Keep inspector controls readable and evenly spaced at every width. */
 .inspector { padding:20px; }
 .inspector-heading { gap:12px; flex-wrap:wrap; }
 .inspector-heading small { font-size:10px; color:#929dac; }
@@ -84,4 +85,14 @@ button { font: inherit; }
 .inspector :is(button,input,select):focus-visible, .source-drawer summary:focus-visible { outline:2px solid #7dd3fc; outline-offset:3px; }
 @media(max-width:900px) { .inspector { padding:20px; } .mode-grid button, .wide-action { min-height:42px; } }
 
-@media(min-width:901px) { .playground-grid { height:clamp(620px, calc(100dvh - 160px), 960px); min-height:0; } .board-stage { height:100%; min-height:0; } .inspector { overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; } }
+@media(min-width:901px) { .playground-grid { height:clamp(620px, calc(100dvh - 160px), 960px); min-height:0; } .board-stage { height:100%; min-height:0; } .inspector { overflow-y:auto; overscroll-behavior:contain; } }
+
+.inspector .checkbox-control { display:flex; align-items:center; gap:8px; min-height:36px; letter-spacing:0; text-transform:none; font-size:12px; }
+.inspector .checkbox-control input { accent-color:#7c5cff; }
+
+@media(max-width:900px) {
+  .playground-grid { min-height:0; }
+  .board-stage { height:clamp(240px, calc(100dvh - 32px), 720px); }
+  .inspector :is(button,select), .brand-color-grid label { min-height:44px; }
+  .inspector :is(input,select) { font-size:16px; }
+}
